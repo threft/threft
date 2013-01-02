@@ -2,23 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/threft/threft-gen-go/gen-go"
 	"github.com/threft/tidm"
 	"os"
 )
 
 var (
-	optionPrintJson bool
 	optionDebugging bool
 )
 
 func main() {
-	// These options are all hardcoded for now.
-	fmt.Println("No output given. Will print tidm-json.")
-	optionPrintJson = true
+	// Options are all hardcoded for now.
 	fmt.Println("Debug mode enabled.")
 	optionDebugging = true
-
-	fmt.Println("Pretty json for debugging hardcoded by importing launchpad.net/rjson as json package.")
 
 	if len(os.Args) < 2 {
 		fmt.Println("No input file given.")
@@ -30,6 +26,6 @@ func main() {
 		return
 	}
 
-	fmt.Printf("%#v\n", T)
+	gen_go.GenerateGo(T)
 
 }
