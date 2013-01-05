@@ -1,0 +1,2 @@
+namespace cpp othercpp
+bla

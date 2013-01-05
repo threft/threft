@@ -1,5 +1,6 @@
-include test bla **this is ignored right now**
-cpp_include Both 'include' and 'cpp_include' header statements are being ignored by the parser.
+include this is ignored
+cpp_include this is ignored
+namespace cpp testcpp
 // comment to be ignored
 # comment to be ignored
 fdsa // comment to be ignored
