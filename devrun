@@ -1,0 +1,13 @@
+#!/usr/bin/env gorun
+package main
+
+// This file is used to quickly compile, clean and test the multiple packages/repositories of the threft project.
+// The shebang instruction at the top of this file requires go get launchpad.net/gorun to be installed. Use: `go get go get launchpad.net/gorun`
+
+import (
+	"fmt"
+)
+
+func main() {
+	fmt.Println("run")
+}
