@@ -1,11 +1,10 @@
 ## Threft application
 
-The threft application is the user front-end for threft code generation. It allows .thrift parsing and code generation for officially supported code generators.
+The threft application is the user front-end for threft code generation. It parses .thrift files and either generates code or invokes an other generator executable which generates the code.
 
-TODO: Test how submodule behaves in this.. i.e. submodule tidm here, and in gen-go, does that work? Probably wont work as expected and deliver troubles.
+TODO: Test how submodule behaves in this.. i.e. submodule tidm here, and in gen-go, does that work? Probably wont work as expected and result in lots of trouble.
 
 Imports gen-go, tidm, encoding/json(no it wont), flags(?).
-
 
 **parser/generator communication**
 For now: skip the marshalling/unmarshalling part. Directly invoke the generator with direct access to the TIDM structure.
