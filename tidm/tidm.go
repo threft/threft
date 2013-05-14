@@ -1,21 +1,84 @@
 package tidm
 
-// The TIDM is the top-level object for Threft Interface Definition Model.
-// It contains documents and namespaces. Each document and namespace contains the complete definition model within that target.
-type TIDM struct {
-	BasePath  string                     // base folder where the .thrift files (and eventual subdirectories with .thrift files) are located.
-	Documents map[DocumentName]*Document // List of all documents that belong to the full TIDM. Bool indicates document parse state
-	Targets   map[TargetName]*Target     // List of all targets that belong to the full TIDM. Value contains the namespaces for the target.
+import (
+	"errors"
+	"fmt"
+)
 
-	// Some details for pretty printing
-	DocumentNameMaxLength int
+// The TIDM is the top-level object for Threft Interface Definition Model.
+// It contains documents and targets.
+type TIDM struct {
+	// open data
+	Documents map[DocumentName]*Document `json:"documents"` // List of all documents that belong to the full TIDM. Bool indicates document parse state
+
+	// stats for info and pretty printing
+	documentNameMaxLength int // Longest name, for pretty printing
+
+	// private stuff, must be populated
+	targetNames map[TargetName]bool
+	targets     map[TargetName]*Target // List of all targets that belong to the full TIDM. Value contains the namespaces for the target.
 }
 
-// Creates a new TIDM object
+// newTIDM sets up a new and empty TIDM
 func newTIDM() *TIDM {
 	return &TIDM{
-		BasePath:  "Unset",
 		Documents: make(map[DocumentName]*Document),
-		Targets:   make(map[TargetName]*Target),
+		targets:   make(map[TargetName]*Target),
 	}
+}
+
+// Creates a new and emtpy TIDM object
+func NewTIDM() *TIDM {
+	return newTIDM()
+}
+
+// NewTIDMFromJson creates a new TIDM instance and populates it from JSON
+// It returns a normal error, not a parse-error because tidm-json should've been checked.
+func NewTIDMFromJson(jsonBytes []byte) (*TIDM, error) {
+	t := newTIDM()
+}
+
+// AddDocument adds a document to the TIDM docTree
+func (t *TIDM) AddDocument(name DocumentName, reader io.Reader) error {
+	err := t.newDocumentFromReader(name, reader)
+	return err
+}
+
+// Verify verifies the complete TIDM tree (each target, each namespace)
+func (t *TIDM) Verify() (perr *ParseError) {
+	//++ get list of all targets
+
+	//++ loop through targets
+	//		perr = t.populateTarget(tname)
+	//		if perr != nil {
+	//			return perr
+	//		}
+}
+
+// Target() returns a Target for given TargetName
+func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
+	var exists bool
+	var perr *ParseError
+
+	// get target from targets map
+	target, exists = t.targets[targetName]
+
+	// see if target exists, if not, populate it
+	if !exists {
+		target, perr = t.populateTarget(targetName)
+		if perr != nil {
+			return nil, fmt.Errorf("Unexpected parse error, TIDM should've been verified before using Target(). %s", perr.Error())
+		}
+	}
+
+	// all done
+	return target, nil
+}
+
+func (t *TIDM) populateTarget(tname TargetName) (perr ParseError) {
+	//++ create target on TIDM
+
+	//++ loop trough documents
+	//++	see if namespace for this target exists in *Target, if not create it.
+	//++	add items from document to namespace, check for each item if it exists
 }

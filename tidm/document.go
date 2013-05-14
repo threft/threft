@@ -2,12 +2,17 @@ package tidm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
+var (
+	ErrDocumentWithNameExists = errors.New("A document with given name exists already in this TIDM")
+)
+
+//++ TODO: public? seriously?
 type DocumentParseState int
 
 const (
@@ -23,71 +28,63 @@ const (
 
 type DocumentName string
 
+// Document can be any 
 type Document struct {
-	T                     *TIDM
-	Name                  DocumentName              // The name of this document. Is also used as NamespaceName for the default Target. Take TIDM.BasePath + Document.Name + ".thrift" = absolute path.
-	NamespaceByTargetName map[TargetName]*Namespace // Contains a list of namespaces for the given document. Once the document is parsed: at least one namespace is in this map, target: default.
-	DefaultNamespace      *Namespace                // Direct link to the default target namespace. This namespace is unique for this document and is ONLY described by this document.
+	t *TIDM
 
-	// Source management
+	Name               DocumentName                 `json:"name"`               // The name of this document.
+	IdentifierStrings  map[string]bool              `json:"identifierStrings"`  // All identifiers in this document
+	Definitions        Definitions                  `json:"definitions"`        // List of definitions in this document
+	NamespaceForTarget map[TargetName]NamespaceName `json:"namespaceForTarget"` // List of namespaces (per target) this document describes
+
+	// source management
 	lines                []string // All source lines for this document. Whitespace is trimmed.
-	lastParsedLineNumber int      // line number of the last parsed line. Used by NextMeaningfulLine().
+	lastParsedLineNumber int      // line number of the last parsed line. Used by nextMeaningfulLine().
 }
 
-func (T *TIDM) newDocumentFromFile(filename string) *Document {
-	var err error
+// DocLine is a reference to a source document and the code line
+type DocLine struct {
+	Document *Document
+	Line     int
+}
 
-	docName := DocumentName(strings.Replace(filename[len(T.BasePath):len(filename)-7], "/", ".", -1))
-	if len(docName) > T.DocumentNameMaxLength {
-		T.DocumentNameMaxLength = len(docName)
+func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
+	// check if docname is unique
+	if _, exists := t.Documents[name]; exists {
+		return nil, ErrDocumentWithNameExists
 	}
 
-	// Create a new document
+	// create and save new doc
 	doc := &Document{
-		T:    T,
-		Name: docName,
-		NamespaceByTargetName: make(map[TargetName]*Namespace),
+		t:                    t,
+		IdentifierStrings:    make(map[string]bool),
+		Definitions:          newDefinitions(),
+		NamespaceForTarget:   make(map[TargetName]NamespaceName),
+		lastParsedLineNumber: -1,
+	}
+	t.Documents[name] = doc
 
-		lastParsedLineNumber: -1, // defaults to -1. As the first line is actually line number 0.
+	// set max doc filename length 
+	if len(docName) > t.documentNameMaxLength {
+		t.documentNameMaxLength = len(docName)
 	}
 
-	// Get the namespace for default target
-	// In this case it is newly created.
-	// It should be imposible that a Namespace is already existing for doc.Name in the Target_default
-	target, exists := T.Targets[Target_default]
-	if !exists {
-		target, err = T.createTarget(Target_default)
-		if err != nil {
-			panic(err)
-		}
-	}
+	// all done
+	return doc, nil
+}
 
-	ns, err := target.createNamespace(NamespaceName(doc.Name))
+func (t *TIDM) newDocumentFromReader(name DocumentName, sourceInput io.Reader) (*Document, error) {
+	// create an empty document
+	doc, err := t.newDocument()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	// Directly link to default namespace (as that namespace is only for this document)
-	doc.DefaultNamespace = ns
-
-	// Add the default Namespace is to the Document.Namespaces list
-	doc.NamespaceByTargetName[Target_default] = ns
-
-	// Connect this Document on the Namespace
-	ns.Documents[doc] = true
-
-	// Connect this Document on the TIDM
-	T.Documents[doc.Name] = doc
-
-	// Assuming file name is correct and file is existing.
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-	sourcereader := bufio.NewReader(file)
+	// read and store lines
+	sourcereader := bufio.NewReader(sourceInput)
 	for {
-		// Blegh, this for loop feels like a trampoline. The EOF pickup could be nicer..
-		// Also: ReadString('\n') isn't really cross-platform, is it?
+		//++ TODO: Blegh, this for loop feels like a trampoline. The EOF pickup could be nicer..
+		//++ TODO: Also: ReadString('\n') isn't really cross-platform, is it?
 		line, err := sourcereader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -96,50 +93,49 @@ func (T *TIDM) newDocumentFromFile(filename string) *Document {
 				}
 				break
 			}
-			fmt.Printf("Error while reading line %d from file %s. %s\n", len(doc.lines)+1, filename, err)
+			fmt.Printf("Error while reading line %d from sourceInput %s. %s\n", len(doc.lines)+1, name, err)
 			break
 		}
 	addLine:
 		doc.lines = append(doc.lines, strings.TrimSpace(line))
 	}
 
-	return doc
+	// all done
+	return doc, nil
 }
 
-func (doc *Document) NextMeaningfulLine() (line string, ok bool) {
+func (doc *Document) nextMeaningfulLine() (line string) {
 	for {
-		// Check if last line has been given already
+		// check if the complete doc has been parsed
 		if len(doc.lines)-1 == doc.lastParsedLineNumber {
-			return "", false
+			return ""
 		}
 
-		// Fetch next line
+		// fetch next line
 		doc.lastParsedLineNumber++
 		line = doc.lines[doc.lastParsedLineNumber]
 
-		// Remove eventual comment from line
+		// remove comments from line
 		pos := strings.Index(line, "#")
 		if pos > -1 {
 			line = line[:pos]
 		}
 		pos = strings.Index(line, "//")
-		
 		if pos > -1 {
 			line = line[:pos]
 		}
 
-		// Trim space and list seperators from line
+		// trim space and list seperators from line
 		line = strings.TrimSpace(line)
 		line = strings.TrimRight(line, ",; ")
+		line = strings.TrimSpace(line)
 
-		// ignore line if it is empty
+		// try next line if this one is empty
 		if len(line) == 0 {
-			// try next line
 			continue
 		}
-		return line, true
+		return line
 	}
-	panic("unreachable")
 }
 
 func (doc *Document) parseDocumentHeaders() {
@@ -148,59 +144,42 @@ func (doc *Document) parseDocumentHeaders() {
 	// loop through lines
 	for {
 
-		line, ok := doc.NextMeaningfulLine()
-		if !ok {
+		line := doc.nextMeaningfulLine()
+		if len(line) == 0 {
 			break // no new lines
 		}
 
 		// get fields from line
 		fields := strings.Fields(line)
 
+		// switch on keyword
 		switch fields[0] {
 		case "include":
-			// Not supporting cross-document references yet.
+			// not supporting cross-document references (yet?).
 			fmt.Printf("Ignoring include statement '%s' in document '%s'\n", line, doc.Name)
-			continue // try next line
+			continue
 
 		case "cpp_include":
-			//Not supporting cpp inclusion yet.
+			// not supporting cpp inclusion (yet?).
 			fmt.Printf("Ignoring cpp_include statement '%s' in document '%s'\n", line, doc.Name)
-			continue // try next line
+			continue
 
 		case "namespace":
+			// invalid namespace header. notify user, then continue.
 			if len(fields) != 3 {
 				fmt.Println("Invalid namespace header. Expecting 'namespace <target> <name>'.")
-				continue // try next line
-			}
-			tn := TargetName(fields[1])
-			nsn := NamespaceName(fields[2])
-			target, exists := doc.T.Targets[tn]
-			if !exists {
-				target, err = doc.T.createTarget(tn)
-				if err != nil {
-					panic(err)
-				}
-			}
-			namespace, exists := target.Namespaces[nsn]
-			if !exists {
-				namespace, err = target.createNamespace(nsn)
-				if err != nil {
-					panic(err)
-				}
+				continue
 			}
 
-			// This document describes the namespace by header statement (hence value is true).
-			namespace.Documents[doc] = true
+			//++ TODO: regexp over targetName and namespaceName
+			tName := TargetName(fields[1])
+			nName := NamespaceName(fields[2])
 
-			// Connect namespace on the document.
-			doc.NamespaceByTargetName[tn] = namespace
-
-			//++ ?? more to do ?
-
-			continue // try next line
+			continue
 
 		default:
-			// Seems we are at the end of the headers (and now at the first definition).
+			// it seems that we arived at the end of the headers and now at the first definition.
+			// decrement lastParsedLineNumber, this line should be parsed by parseDocumentDefinitions()
 			doc.lastParsedLineNumber--
 			return
 		}
@@ -214,7 +193,7 @@ func (doc *Document) parseDocumentHeaders() {
 func (doc *Document) parseDocumentDefinitions() {
 	// loop through lines
 	for {
-		line, ok := doc.NextMeaningfulLine()
+		line, ok := doc.nextMeaningfulLine()
 		if !ok {
 			break // No new line. End of document.
 		}

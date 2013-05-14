@@ -1,6 +1,6 @@
 package tidm
 
 type Identifier struct {
-	Document *Document
-	Name     string
+	DocLine *DocLine
+	Name    string
 }

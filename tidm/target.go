@@ -10,7 +10,8 @@ type TargetName string
 const Target_default = TargetName("default")
 
 type Target struct {
-	T          *TIDM
+	t *TIDM
+
 	Name       TargetName
 	Namespaces map[NamespaceName]*Namespace
 }
