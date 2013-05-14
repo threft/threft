@@ -8,49 +8,38 @@ import (
 type NamespaceName string
 
 // For each target+namespace combination, a namespace is created. Within each namespace, all identifiers must be unique.
-// There is a default namespace created for each document.
 type Namespace struct {
-	T         *TIDM
-	Target    *Target            // The target this namespace belongs to
-	Name      NamespaceName      // The name of this namespace
-	Documents map[*Document]bool // Boolean value indicates: true=namespace by header. false=namespace by document name.
+	target *Target
 
-	Constants  map[*Identifier]*Constant
-	Typedefs   map[*Identifier]*Typedef
-	Enums      map[*Identifier]*Enums
-	Senums     map[*Identifier]*Senum
-	Structs    map[*Identifier]*Struct
-	Exceptions map[*Identifier]*Exception
-	Services   map[*Identifier]*Service
+	Name        NamespaceName // the name of this namespace
+	Definitions *Definitions  // definitions within this namespace
+
+	identifierStrings map[string]bool // Identifiers used in this namespace
 }
 
-func (target *Target) createNamespace(namespaceName NamespaceName) (*Namespace, error) {
-	_, exists := target.Namespaces[namespaceName]
+// create a new (empty) namespace for the target
+func (target *Target) newNamespace(name NamespaceName) (*Namespace, error) {
+	// check for existing namespace
+	_, exists := target.Namespaces[name]
 	if exists {
-		return nil, fmt.Errorf("Namespace '%s' exists already on target '%s'", target.Name, namespaceName)
+		return nil, fmt.Errorf("Namespace '%s' exists already on target '%s'", name, target.Name)
 	}
 
-	// No existing namespace was found, creating a new one.
+	// create and save new namespace
 	newNamespace := &Namespace{
-		T:         target.T,
-		Target:    target,
-		Name:      namespaceName,
-		Documents: make(map[*Document]bool),
+		target:      target,
+		Name:        name,
+		Definitions: newDefinitions(),
 
-		// Definitions
-		Constants:  make(map[*Identifier]*Constant),
-		Typedefs:   make(map[*Identifier]*Typedef),
-		Enums:      make(map[*Identifier]*Enums),
-		Senums:     make(map[*Identifier]*Senum),
-		Structs:    make(map[*Identifier]*Struct),
-		Exceptions: make(map[*Identifier]*Exception),
-		Services:   make(map[*Identifier]*Service),
+		identifierStrings: make(map[string]bool),
 	}
-	target.Namespaces[namespaceName] = newNamespace
+	target.Namespaces[name] = newNamespace
+
+	// all done
 	return newNamespace, nil
 }
 
-// Human readable identifier for this namespace (target + name)
+// Human readable identifier for this namespace
 func (ns *Namespace) String() string {
-	return string(ns.Target.Name) + "[" + string(ns.Name) + "]"
+	return string(ns.target.Name) + "[" + string(ns.Name) + "]"
 }

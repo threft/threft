@@ -1,37 +1,30 @@
 package tidm
 
-import (
-	"fmt"
-)
+import ()
 
 // TargetName for a namespace (language or docstyle).
 type TargetName string
 
-const Target_default = TargetName("default")
+const (
+	TargetNameDefault = TargetName("*")
+	TargetNameHtml    = TargetName("html")
+	TargetNameGo      = TargetName("go")
+)
 
+// Target defines a set of namespaces within a target.
+// A target can be a language
 type Target struct {
-	t *TIDM
-
 	Name       TargetName
 	Namespaces map[NamespaceName]*Namespace
 }
 
-func (T *TIDM) createTarget(targetName TargetName) (*Target, error) {
-	_, exists := T.Targets[targetName]
-	if exists {
-		return nil, fmt.Errorf("There is already a target '%s' name on TIDM", targetName)
-	}
-
-	// Create Target object
+func newTarget(name TargetName) *Target {
+	// create new Target
 	target := &Target{
-		T:          T,
-		Name:       targetName,
+		Name:       name,
 		Namespaces: make(map[NamespaceName]*Namespace),
 	}
 
-	// Store in TIDM Targets map
-	T.Targets[targetName] = target
-
 	// Return created target
-	return target, nil
+	return target
 }

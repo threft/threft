@@ -1,8 +1,8 @@
 package tidm
 
 import (
-	"errors"
 	"fmt"
+	"io"
 )
 
 // The TIDM is the top-level object for Threft Interface Definition Model.
@@ -36,11 +36,12 @@ func NewTIDM() *TIDM {
 // It returns a normal error, not a parse-error because tidm-json should've been checked.
 func NewTIDMFromJson(jsonBytes []byte) (*TIDM, error) {
 	t := newTIDM()
+	return t, nil
 }
 
 // AddDocument adds a document to the TIDM docTree
 func (t *TIDM) AddDocument(name DocumentName, reader io.Reader) error {
-	err := t.newDocumentFromReader(name, reader)
+	_, err := t.newDocumentFromReader(name, reader)
 	return err
 }
 
@@ -53,6 +54,7 @@ func (t *TIDM) Verify() (perr *ParseError) {
 	//		if perr != nil {
 	//			return perr
 	//		}
+	return
 }
 
 // Target() returns a Target for given TargetName
@@ -65,7 +67,7 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 
 	// see if target exists, if not, populate it
 	if !exists {
-		target, perr = t.populateTarget(targetName)
+		perr = t.populateTarget(targetName)
 		if perr != nil {
 			return nil, fmt.Errorf("Unexpected parse error, TIDM should've been verified before using Target(). %s", perr.Error())
 		}
@@ -75,10 +77,11 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 	return target, nil
 }
 
-func (t *TIDM) populateTarget(tname TargetName) (perr ParseError) {
+func (t *TIDM) populateTarget(tname TargetName) (perr *ParseError) {
 	//++ create target on TIDM
 
 	//++ loop trough documents
 	//++	see if namespace for this target exists in *Target, if not create it.
 	//++	add items from document to namespace, check for each item if it exists
+	return
 }

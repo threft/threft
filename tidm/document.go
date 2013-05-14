@@ -12,34 +12,22 @@ var (
 	ErrDocumentWithNameExists = errors.New("A document with given name exists already in this TIDM")
 )
 
-//++ TODO: public? seriously?
-type DocumentParseState int
-
-const (
-	DocumentParseState_None = DocumentParseState(iota)
-	DocumentParseState_Added
-	DocumentParseState_HeaderParsed
-	DocumentParseState_BodyParsed
-)
-
-const (
-	NoDefinitionsInDocument = -1
-)
-
+// DocumentName represents any documentname, this can be anything (filename, random string, "stdin", etc.)
 type DocumentName string
 
-// Document can be any 
+// Document can be any thrift definition language source (filename, StdIn, etc.)
+// A document is created by this package. See TIDM.AddDocument()
 type Document struct {
 	t *TIDM
 
 	Name               DocumentName                 `json:"name"`               // The name of this document.
-	IdentifierStrings  map[string]bool              `json:"identifierStrings"`  // All identifiers in this document
-	Definitions        Definitions                  `json:"definitions"`        // List of definitions in this document
+	Definitions        *Definitions                 `json:"definitions"`        // List of definitions in this document
 	NamespaceForTarget map[TargetName]NamespaceName `json:"namespaceForTarget"` // List of namespaces (per target) this document describes
 
 	// source management
-	lines                []string // All source lines for this document. Whitespace is trimmed.
-	lastParsedLineNumber int      // line number of the last parsed line. Used by nextMeaningfulLine().
+	identifierStrings    map[string]bool // All identifiers in this document
+	lines                []string        // All source lines for this document. Whitespace is trimmed.
+	lastParsedLineNumber int             // line number of the last parsed line. Used by nextMeaningfulLine().
 }
 
 // DocLine is a reference to a source document and the code line
@@ -57,7 +45,7 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 	// create and save new doc
 	doc := &Document{
 		t:                    t,
-		IdentifierStrings:    make(map[string]bool),
+		identifierStrings:    make(map[string]bool),
 		Definitions:          newDefinitions(),
 		NamespaceForTarget:   make(map[TargetName]NamespaceName),
 		lastParsedLineNumber: -1,
@@ -65,8 +53,8 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 	t.Documents[name] = doc
 
 	// set max doc filename length 
-	if len(docName) > t.documentNameMaxLength {
-		t.documentNameMaxLength = len(docName)
+	if len(name) > t.documentNameMaxLength {
+		t.documentNameMaxLength = len(name)
 	}
 
 	// all done
@@ -75,7 +63,7 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 
 func (t *TIDM) newDocumentFromReader(name DocumentName, sourceInput io.Reader) (*Document, error) {
 	// create an empty document
-	doc, err := t.newDocument()
+	doc, err := t.newDocument(name)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +127,6 @@ func (doc *Document) nextMeaningfulLine() (line string) {
 }
 
 func (doc *Document) parseDocumentHeaders() {
-	var err error
 
 	// loop through lines
 	for {
@@ -175,6 +162,9 @@ func (doc *Document) parseDocumentHeaders() {
 			tName := TargetName(fields[1])
 			nName := NamespaceName(fields[2])
 
+			//++ TODO: continue work..
+			_, _ = tName, nName
+
 			continue
 
 		default:
@@ -193,9 +183,10 @@ func (doc *Document) parseDocumentHeaders() {
 func (doc *Document) parseDocumentDefinitions() {
 	// loop through lines
 	for {
-		line, ok := doc.nextMeaningfulLine()
-		if !ok {
-			break // No new line. End of document.
+		line := doc.nextMeaningfulLine()
+		if len(line) == 0 {
+			// done
+			break
 		}
 
 		if strings.HasPrefix(line, "const") { // 'const' FieldType Identifier '=' ConstValue ListSeparator?
