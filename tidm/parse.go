@@ -6,6 +6,7 @@ const (
 	ParseErrorTypeUnexpectedKeyword = ParseErrorType(iota)
 	ParseErrorTypeFoo
 	parseErrorTypeBar
+	ParseErrorTypeOther
 )
 
 // ParseError contains information about a parse error

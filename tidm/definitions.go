@@ -1,6 +1,18 @@
 package tidm
 
+import (
+	"errors"
+)
+
+const (
+	ErrIdentifierExists = errors.New("Identifiers exists already")
+)
+
 type Definitions struct {
+	// list of identifiers used in this set of Definitions
+	IdentifierStrings map[string]bool
+
+	// Actual definitions
 	Constants  map[*Identifier]*Constant
 	Typedefs   map[*Identifier]*Typedef
 	Enums      map[*Identifier]*Enums
@@ -12,6 +24,8 @@ type Definitions struct {
 
 func newDefinitions() *Definitions {
 	return &Definitions{
+		IdentifierStrings: make(map[string]bool),
+
 		Constants:  make(map[*Identifier]*Constant),
 		Typedefs:   make(map[*Identifier]*Typedef),
 		Enums:      make(map[*Identifier]*Enums),
@@ -21,6 +35,8 @@ func newDefinitions() *Definitions {
 		Services:   make(map[*Identifier]*Service),
 	}
 }
+
+//++ TODO: Add AddConstant, AddTypedef, etc. methods that check if identifier is unique and then add the type and its identifier
 
 //++ TODO
 type Constant struct {

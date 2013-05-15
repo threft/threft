@@ -13,8 +13,6 @@ type Namespace struct {
 
 	Name        NamespaceName // the name of this namespace
 	Definitions *Definitions  // definitions within this namespace
-
-	identifierStrings map[string]bool // Identifiers used in this namespace
 }
 
 // create a new (empty) namespace for the target

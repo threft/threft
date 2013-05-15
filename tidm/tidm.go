@@ -67,7 +67,7 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 
 	// see if target exists, if not, populate it
 	if !exists {
-		perr = t.populateTarget(targetName)
+		target, perr = t.populateTarget(targetName)
 		if perr != nil {
 			return nil, fmt.Errorf("Unexpected parse error, TIDM should've been verified before using Target(). %s", perr.Error())
 		}
@@ -77,11 +77,29 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 	return target, nil
 }
 
-func (t *TIDM) populateTarget(tname TargetName) (perr *ParseError) {
-	//++ create target on TIDM
+func (t *TIDM) populateTarget(targetName TargetName) (target *Target, perr *ParseError) {
+	var err error
 
-	//++ loop trough documents
-	//++	see if namespace for this target exists in *Target, if not create it.
-	//++	add items from document to namespace, check for each item if it exists
+	// create new empty target instance
+	target = newTarget(targetName)
+	t.targets[targetName] = target
+
+	// loop through documents
+	for _, doc := range t.Documents {
+		// find namespace, create one if it does not exist
+		namespaceName := doc.NamespaceForTarget[targetName]
+		namespace, nsExists := target.Namespaces[namespaceName]
+		if !nsExists {
+			namespace, err = target.newNamespace(namespaceName)
+			if err != nil {
+				return nil, &ParseError{
+					Type:    ParseErrorTypeOther,
+					Message: err.Error(),
+				}
+			}
+		}
+
+		//++ use add methods for all definitions from doc to namespace.
+	}
 	return
 }
