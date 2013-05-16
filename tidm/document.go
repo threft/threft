@@ -147,12 +147,12 @@ func (doc *Document) parseDocumentHeaders() (perr *ParseError) {
 		switch fields[0] {
 		case "include":
 			// not supporting cross-document references (yet?).
-			fmt.Printf("Ignoring include statement '%s' in document '%s'\n", line, doc.Name)
+			fmt.Printf("Ignoring include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber)
 			continue
 
 		case "cpp_include":
 			// not supporting cpp inclusion (yet?).
-			fmt.Printf("Ignoring cpp_include statement '%s' in document '%s'\n", line, doc.Name)
+			fmt.Printf("Ignoring cpp_include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber)
 			continue
 
 		case "namespace":

@@ -38,6 +38,25 @@ func NewTIDM() *TIDM {
 	return newTIDM()
 }
 
+// write tidm-json to given writer
+func (t *TIDM) WriteTo(w io.Writer) (err error) {
+	enc := json.NewEncoder(w)
+	err = enc.Encode(t)
+	return err
+}
+
+// read tidm-json from given reader
+func ReadFrom(r io.Reader) (t *TIDM, err error) {
+	t = newTIDM()
+	dec := json.NewDecoder(r)
+	err = dec.Decode(t)
+	if err != nil {
+		return nil, err
+	}
+	t.parsed = true
+	return t, nil
+}
+
 // AddDocument adds a document to the TIDM docTree
 // The given reader can be closed directly after this call returns
 func (t *TIDM) AddDocument(name DocumentName, reader io.Reader) error {
@@ -115,22 +134,6 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 
 	// all done
 	return target, nil
-}
-
-func (t *TIDM) WriteTo(w io.Writer) (err error) {
-	enc := json.NewEncoder(w)
-	err = enc.Encode(t)
-	return err
-}
-
-func ReadFrom(r io.Reader) (t *TIDM, err error) {
-	dec := json.NewDecoder(r)
-	err = dec.Decode(t)
-	if err != nil {
-		return nil, err
-	}
-	t.parsed = true
-	return t, nil
 }
 
 // add definitions from TIDM.Documents to the right namespace for given target

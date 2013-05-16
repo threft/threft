@@ -5,6 +5,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/threft/threft/tidm"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -154,6 +155,51 @@ func main() {
 		}
 	}
 
-	// // right now we directly call the gog library, instead of parsing to tidm-json and invoking seperate binary (threft-gen-go)
-	// gog.GenerateGo(t)
+	// get generator fields (possibly options)
+	genFields := strings.Fields(options.Generator)
+	if len(genFields) == 0 {
+		fmt.Println("No generator given. Can not continue. Use -g to generate code.")
+		return
+	}
+
+	// prepare generator command
+	genCmd := exec.Command("threft-gen-"+genFields[0], genFields[1:]...)
+	genCmd.Stderr = os.Stderr
+	genCmd.Stdout = os.Stdout
+
+	// get stdinPipe to send json when process has started
+	stdinPipe, err := genCmd.StdinPipe()
+	if err != nil {
+		fmt.Printf("Error getting stdin pipe: %s\n", err)
+		return
+	}
+
+	// start generator
+	err = genCmd.Start()
+	if err != nil {
+		fmt.Printf("Error on starting generator: %s\n", err)
+		return
+	}
+
+	// write tidm-json to generator
+	err = t.WriteTo(stdinPipe)
+	if err != nil {
+		fmt.Printf("Error writing data to generator: %s\n", err)
+		return
+	}
+
+	// close the stdinPipe
+	err = stdinPipe.Close()
+	if err != nil {
+		fmt.Printf("Error closing stdin pipe: %s\n", err)
+	}
+
+	// wait for generator to exit
+	err = genCmd.Wait()
+	if err != nil {
+		fmt.Printf("Error while running generator: %s\n", err)
+		return
+	}
+
+	fmt.Println("All done.")
 }
