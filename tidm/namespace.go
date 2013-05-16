@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-// Name for a namespace.
+// Name for a Namespace.
 type NamespaceName string
 
-// For each target+namespace combination, a namespace is created. Within each namespace, all identifiers must be unique.
+// Namespace defines a set of definitions with unique identifiers within a single scope.
 type Namespace struct {
 	target *Target
 
@@ -28,8 +28,6 @@ func (target *Target) newNamespace(name NamespaceName) (*Namespace, error) {
 		target:      target,
 		Name:        name,
 		Definitions: newDefinitions(),
-
-		identifierStrings: make(map[string]bool),
 	}
 	target.Namespaces[name] = newNamespace
 

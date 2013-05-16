@@ -1,8 +1,12 @@
 package tidm
 
 import (
-	"fmt"
+	"errors"
 	"io"
+)
+
+var (
+	ErrNotParsedYet = errors.New("Cannot get a Target from an unparsed TIDM.")
 )
 
 // The TIDM is the top-level object for Threft Interface Definition Model.
@@ -15,7 +19,8 @@ type TIDM struct {
 	documentNameMaxLength int // Longest name, for pretty printing
 
 	// private stuff, must be populated
-	targetNames map[TargetName]bool
+	parsed      bool                   // true when TIDM was parsed
+	targetNames map[TargetName]bool    // list of known target names
 	targets     map[TargetName]*Target // List of all targets that belong to the full TIDM. Value contains the namespaces for the target.
 }
 
@@ -40,16 +45,44 @@ func NewTIDMFromJson(jsonBytes []byte) (*TIDM, error) {
 }
 
 // AddDocument adds a document to the TIDM docTree
+// The given reader can be closed directly after this call returns
 func (t *TIDM) AddDocument(name DocumentName, reader io.Reader) error {
+	if t.parsed {
+		return &ParseError{
+			Type:    ParseErrorTypeAlreadyParsed,
+			Message: "Cannot add a document after the TIDM has been parsed.",
+		}
+	}
+
 	_, err := t.newDocumentFromReader(name, reader)
 	return err
 }
 
-// Verify verifies the complete TIDM tree (each target, each namespace)
-func (t *TIDM) Verify() (perr *ParseError) {
+// Parse parses and verifies the complete TIDM tree (each document, each target, each namespace)
+func (t *TIDM) Parse() (perr *ParseError) {
+	if t.parsed {
+		return &ParseError{
+			Type:    ParseErrorTypeAlreadyParsed,
+			Message: "Cannot parse an already parsed TIDM structure.",
+		}
+	}
+	t.parsed = true
+
+	// parse all documents
+	for _, doc := range t.Documents {
+		perr = doc.parseDocumentHeaders()
+		if perr != nil {
+			return perr
+		}
+		perr = doc.parseDocumentDefinitions()
+		if perr != nil {
+			return perr
+		}
+	}
+
 	//++ get list of all targets
 
-	//++ loop through targets
+	//++ loop through targets and "default"
 	//		perr = t.populateTarget(tname)
 	//		if perr != nil {
 	//			return perr
@@ -59,24 +92,24 @@ func (t *TIDM) Verify() (perr *ParseError) {
 
 // Target() returns a Target for given TargetName
 func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
-	var exists bool
-	var perr *ParseError
+	if !t.parsed {
+		return nil, ErrNotParsedYet
+	}
 
 	// get target from targets map
+	var exists bool
 	target, exists = t.targets[targetName]
 
-	// see if target exists, if not, populate it
+	// see if target exists, get default target if it doesnt.
 	if !exists {
-		target, perr = t.populateTarget(targetName)
-		if perr != nil {
-			return nil, fmt.Errorf("Unexpected parse error, TIDM should've been verified before using Target(). %s", perr.Error())
-		}
+		//++ TODO: get default target
 	}
 
 	// all done
 	return target, nil
 }
 
+// create a target and populate it from documents
 func (t *TIDM) populateTarget(targetName TargetName) (target *Target, perr *ParseError) {
 	var err error
 
@@ -93,13 +126,14 @@ func (t *TIDM) populateTarget(targetName TargetName) (target *Target, perr *Pars
 			namespace, err = target.newNamespace(namespaceName)
 			if err != nil {
 				return nil, &ParseError{
-					Type:    ParseErrorTypeOther,
+					Type:    ParseErrorTypeUnexpectedError,
 					Message: err.Error(),
 				}
 			}
 		}
 
-		//++ use add methods for all definitions from doc to namespace.
+		//++ TODO: use addExisting methods for all definitions from doc to namespace.
+		_ = namespace
 	}
 	return
 }

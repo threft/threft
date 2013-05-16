@@ -4,9 +4,9 @@ type ParseErrorType int
 
 const (
 	ParseErrorTypeUnexpectedKeyword = ParseErrorType(iota)
-	ParseErrorTypeFoo
-	parseErrorTypeBar
-	ParseErrorTypeOther
+	ParseErrorTypeAlreadyParsed
+	ParseErrorTypeNoDefinitionsFound
+	ParseErrorTypeUnexpectedError
 )
 
 // ParseError contains information about a parse error

@@ -4,35 +4,36 @@ import (
 	"errors"
 )
 
-const (
-	ErrIdentifierExists = errors.New("Identifiers exists already")
+var (
+	ErrDulicateIdentifier = errors.New("Duplicate identifier")
 )
 
+// Definitions is a set of definitions with a unique identifier
 type Definitions struct {
 	// list of identifiers used in this set of Definitions
-	IdentifierStrings map[string]bool
+	identifiers map[IdentifierName]*Identifier
 
 	// Actual definitions
-	Constants  map[*Identifier]*Constant
-	Typedefs   map[*Identifier]*Typedef
-	Enums      map[*Identifier]*Enums
-	Senums     map[*Identifier]*Senum
-	Structs    map[*Identifier]*Struct
-	Exceptions map[*Identifier]*Exception
-	Services   map[*Identifier]*Service
+	Constants  map[IdentifierName]*Constant  `json:"constants"`
+	Typedefs   map[IdentifierName]*Typedef   `json:"typedefs"`
+	Enums      map[IdentifierName]*Enums     `json:"enums"`
+	Senums     map[IdentifierName]*Senum     `json:"senums"`
+	Structs    map[IdentifierName]*Struct    `json:"structs"`
+	Exceptions map[IdentifierName]*Exception `json:"exceptions"`
+	Services   map[IdentifierName]*Service   `json:"services"`
 }
 
 func newDefinitions() *Definitions {
 	return &Definitions{
-		IdentifierStrings: make(map[string]bool),
+		identifiers: make(map[IdentifierName]*Identifier),
 
-		Constants:  make(map[*Identifier]*Constant),
-		Typedefs:   make(map[*Identifier]*Typedef),
-		Enums:      make(map[*Identifier]*Enums),
-		Senums:     make(map[*Identifier]*Senum),
-		Structs:    make(map[*Identifier]*Struct),
-		Exceptions: make(map[*Identifier]*Exception),
-		Services:   make(map[*Identifier]*Service),
+		Constants:  make(map[IdentifierName]*Constant),
+		Typedefs:   make(map[IdentifierName]*Typedef),
+		Enums:      make(map[IdentifierName]*Enums),
+		Senums:     make(map[IdentifierName]*Senum),
+		Structs:    make(map[IdentifierName]*Struct),
+		Exceptions: make(map[IdentifierName]*Exception),
+		Services:   make(map[IdentifierName]*Service),
 	}
 }
 
@@ -40,49 +41,70 @@ func newDefinitions() *Definitions {
 
 //++ TODO
 type Constant struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Typedef struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Enums struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Senum struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Struct struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Exception struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }
 
 //++ TODO
 type Service struct {
-	DocLine DocLine
-	foo     string
-	bar     int
+	Identifier *Identifier
+
+	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
+
+	Foo string
+	Bar int
 }

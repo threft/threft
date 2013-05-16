@@ -30,10 +30,10 @@ type Document struct {
 	lastParsedLineNumber int             // line number of the last parsed line. Used by nextMeaningfulLine().
 }
 
-// DocLine is a reference to a source document and the code line
+// DocLine is a reference to a thrift idl document and the source line number
 type DocLine struct {
-	Document *Document
-	Line     int
+	DocumentName DocumentName `json:"documentName"`
+	Line         int          `json:"line"`
 }
 
 func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
@@ -50,6 +50,7 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 		NamespaceForTarget:   make(map[TargetName]NamespaceName),
 		lastParsedLineNumber: -1,
 	}
+	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".thrift", "", -1))
 	t.Documents[name] = doc
 
 	// set max doc filename length 
@@ -92,6 +93,7 @@ func (t *TIDM) newDocumentFromReader(name DocumentName, sourceInput io.Reader) (
 	return doc, nil
 }
 
+// nextMeaningfulLine gives the next line that is not empty nor a comment
 func (doc *Document) nextMeaningfulLine() (line string) {
 	for {
 		// check if the complete doc has been parsed
@@ -126,8 +128,8 @@ func (doc *Document) nextMeaningfulLine() (line string) {
 	}
 }
 
-func (doc *Document) parseDocumentHeaders() {
-
+// parseDocumentHeaders parses document headers
+func (doc *Document) parseDocumentHeaders() (perr *ParseError) {
 	// loop through lines
 	for {
 
@@ -158,29 +160,31 @@ func (doc *Document) parseDocumentHeaders() {
 				continue
 			}
 
-			//++ TODO: regexp over targetName and namespaceName
-			tName := TargetName(fields[1])
-			nName := NamespaceName(fields[2])
+			// add target/namespace to document
+			targetName := TargetName(fields[1])
+			namespaceName := NamespaceName(fields[2])
+			doc.NamespaceForTarget[targetName] = namespaceName
 
-			//++ TODO: continue work..
-			_, _ = tName, nName
-
+			// done, next line!
 			continue
 
 		default:
-			// it seems that we arived at the end of the headers and now at the first definition.
+			// it seems that we arived at the end of the headers and now at the first definition
 			// decrement lastParsedLineNumber, this line should be parsed by parseDocumentDefinitions()
 			doc.lastParsedLineNumber--
-			return
+			// done parsing headers successfully
+			return nil
 		}
 	}
 
-	// Found end of document (all lines parsed) without finding the start of a definition.
-	// No first definition found.
-	fmt.Printf("It looks like document '%s' contains no definitions.\n", doc.Name)
+	// end of document
+	return nil
 }
 
-func (doc *Document) parseDocumentDefinitions() {
+// parseDocumentDefinitions parses document definitions
+func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
+	var countDefinitions int
+
 	// loop through lines
 	for {
 		line := doc.nextMeaningfulLine()
@@ -188,6 +192,8 @@ func (doc *Document) parseDocumentDefinitions() {
 			// done
 			break
 		}
+
+		//++ check if identifier is unique
 
 		if strings.HasPrefix(line, "const") { // 'const' FieldType Identifier '=' ConstValue ListSeparator?
 			//++
@@ -206,5 +212,15 @@ func (doc *Document) parseDocumentDefinitions() {
 		}
 		fmt.Printf("definition: %s\n", line)
 	}
-	return
+
+	// it is required that the document contained definitions, otherwise return an error
+	if countDefinitions == 0 {
+		return &ParseError{
+			Type:    ParseErrorTypeNoDefinitionsFound,
+			Message: fmt.Sprintf("It looks like document '%s' contains no definitions.\n", doc.Name),
+		}
+	}
+
+	// all done
+	return nil
 }
