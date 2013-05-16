@@ -51,6 +51,7 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 		NamespaceForTarget:   make(map[TargetName]NamespaceName),
 		lastParsedLineNumber: -1,
 	}
+	doc.lines = append(doc.lines, "") // add empty line to skip line 0.
 	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".thrift", "", -1))
 	t.Documents[name] = doc
 
@@ -216,7 +217,6 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			//++ TODO: regexp identifier
 
 			// check if identifier is unique
-
 			if i, exists := doc.Definitions.identifiers[IdentifierName(words[2])]; exists {
 				return &ParseError{
 					Type:    ParseErrorTypeDuplicateIdentifier,

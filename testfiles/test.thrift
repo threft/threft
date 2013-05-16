@@ -1,6 +1,6 @@
 include this is ignored
 cpp_include this is ignored
-namespace cpp testcpp
+namespace cpp othercpp
 // comment to be ignored
 # comment to be ignored
 

@@ -35,7 +35,7 @@ func (target *Target) newNamespace(name NamespaceName) (*Namespace, error) {
 	return newNamespace, nil
 }
 
-// Human readable identifier for this namespace
-func (ns *Namespace) String() string {
-	return string(ns.target.Name) + "[" + string(ns.Name) + "]"
+// Human readable identifier for this namespace (includes target)
+func (ns *Namespace) FullName() string {
+	return fmt.Sprintf("[target: %s, namespace: %s]", ns.target.Name, ns.Name)
 }

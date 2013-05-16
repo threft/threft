@@ -130,7 +130,7 @@ func main() {
 
 		// add document to TIDM
 		lastPathSeperator := strings.LastIndex(filename, string(os.PathSeparator))
-		documentNameString := strings.Replace(filename[lastPathSeperator+1:], ".thrift", "", 1)
+		documentNameString := filename[lastPathSeperator+1:]
 		err = t.AddDocument(tidm.DocumentName(documentNameString), file)
 		if err != nil {
 			fmt.Printf("Error adding document to TIDM: %s\n", err)

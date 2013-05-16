@@ -3,6 +3,7 @@ package tidm
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -63,23 +64,36 @@ func (t *TIDM) Parse() (perr *ParseError) {
 
 	// parse all documents
 	for _, doc := range t.Documents {
+		// parse headers
 		perr = doc.parseDocumentHeaders()
 		if perr != nil {
 			return perr
 		}
+
+		// parse definitions
 		perr = doc.parseDocumentDefinitions()
+		if perr != nil {
+			return perr
+		}
+
+		// add defined Targets to TIDM Targets map
+		for targetName, _ := range doc.NamespaceForTarget {
+			if _, exists := t.Targets[targetName]; !exists {
+				target := newTarget(targetName)
+				t.Targets[targetName] = target
+			}
+		}
+	}
+
+	// loop through targets and populate them with the parsed data
+	for targetName, _ := range t.Targets {
+		perr = t.populateTarget(targetName)
 		if perr != nil {
 			return perr
 		}
 	}
 
-	//++ get list of all targets
-
-	//++ loop through targets and "default"
-	//		perr = t.populateTarget(tname)
-	//		if perr != nil {
-	//			return perr
-	//		}
+	// all done
 	return
 }
 
@@ -119,31 +133,50 @@ func ReadFrom(r io.Reader) (t *TIDM, err error) {
 	return t, nil
 }
 
-// create a target and populate it from documents
-func (t *TIDM) populateTarget(targetName TargetName) (target *Target, perr *ParseError) {
+// add definitions from TIDM.Documents to the right namespace for given target
+func (t *TIDM) populateTarget(targetName TargetName) (perr *ParseError) {
 	var err error
 
-	// create new empty target instance
-	target = newTarget(targetName)
-	t.Targets[targetName] = target
+	// get target from TIDM.Targets list
+	target := t.Targets[targetName]
 
 	// loop through documents
 	for _, doc := range t.Documents {
-		// find namespace, create one if it does not exist
+
+		// find namespace for this target/document, create one if it does not exist
 		namespaceName := doc.NamespaceForTarget[targetName]
+		if len(namespaceName) == 0 {
+			namespaceName = doc.NamespaceForTarget[TargetNameDefault]
+		}
 		namespace, nsExists := target.Namespaces[namespaceName]
 		if !nsExists {
 			namespace, err = target.newNamespace(namespaceName)
 			if err != nil {
-				return nil, &ParseError{
+				return &ParseError{
 					Type:    ParseErrorTypeUnexpectedError,
 					Message: err.Error(),
 				}
 			}
 		}
 
-		//++ TODO: use addExisting methods for all definitions from doc to namespace.
-		_ = namespace
+		// check if identifiers from this doc can 'fit' in target namespace
+		for _, newIdentifier := range doc.Definitions.identifiers {
+			if existingIdentifier, exists := namespace.Definitions.identifiers[newIdentifier.Name]; exists {
+				return &ParseError{
+					Type:    ParseErrorTypeDuplicateIdentifier,
+					Message: fmt.Sprintf("The identifier '%s' is not unique for %s. Previous declaration at %s:%d", existingIdentifier.Name, namespace.FullName(), existingIdentifier.DocLine.DocumentName, existingIdentifier.DocLine.Line),
+					DocLine: newIdentifier.DocLine,
+				}
+			}
+		}
+
+		// add const definitions to target namespace
+		for _, c := range doc.Definitions.Consts {
+			namespace.Definitions.identifiers[c.Identifier.Name] = c.Identifier
+			namespace.Definitions.Consts[c.Identifier.Name] = c
+		}
+
+		//++ add other definitions to target namespace
 	}
-	return
+	return nil
 }
