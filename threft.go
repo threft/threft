@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jessevdk/go-flags"
 	"github.com/threft/threft/tidm"
 	"os"
@@ -14,7 +13,7 @@ var options struct {
 	InputFiles   []string `short:"i" long:"input" description:"Input folders/files"`
 	Generator    string   `short:"g" long:"gen" description:"Generator to use (for example: go, html), can include arguments for generator"`
 	OutputFolder string   `short:"o" long:"output" description:"Folder to generate code to"`
-	Dump         bool     `long:"dump" description:"Dumps TIDM structure to ./tidm_dump"`
+	DumpTIDM     bool     `long:"dump-tidm" description:"Dumps TIDM structure to ./tidm_dump"`
 }
 
 func main() {
@@ -143,10 +142,11 @@ func main() {
 	// parse complete TIDM structure (each document, each target, each namespace)
 	perr := t.Parse()
 	if perr != nil {
-		spew.Dump(perr)
+		fmt.Printf("\nError in %s:%d\n \t%s\n", perr.DocLine.DocumentName, perr.DocLine.Line, perr.Message)
 	}
 
-	if options.Dump {
+	// do a TIDM dump if requested by user
+	if options.DumpTIDM {
 		err = dumpTIDM(t)
 		if err != nil {
 			fmt.Println(err)

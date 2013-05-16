@@ -6,7 +6,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/threft/threft/tidm"
 	"io"
-	"launchpad.net/rjson"
 	"os"
 )
 

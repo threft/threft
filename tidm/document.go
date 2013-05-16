@@ -20,20 +20,20 @@ type DocumentName string
 type Document struct {
 	t *TIDM
 
-	Name               DocumentName                 `json:"name"`               // The name of this document.
-	Definitions        *Definitions                 `json:"definitions"`        // List of definitions in this document
-	NamespaceForTarget map[TargetName]NamespaceName `json:"namespaceForTarget"` // List of namespaces (per target) this document describes
+	Name               DocumentName                 // The name of this document.
+	Definitions        *Definitions                 // List of definitions in this document
+	NamespaceForTarget map[TargetName]NamespaceName // List of namespaces (per target) this document describes
 
 	// source management
-	identifierStrings    map[string]bool // All identifiers in this document
-	lines                []string        // All source lines for this document. Whitespace is trimmed.
-	lastParsedLineNumber int             // line number of the last parsed line. Used by nextMeaningfulLine().
+	// identifierStrings    map[string]bool // All identifiers in this document
+	lines                []string // All source lines for this document. Whitespace is trimmed.
+	lastParsedLineNumber int      // line number of the last parsed line. Used by nextMeaningfulLine().
 }
 
 // DocLine is a reference to a thrift idl document and the source line number
 type DocLine struct {
-	DocumentName DocumentName `json:"documentName"`
-	Line         int          `json:"line"`
+	DocumentName DocumentName
+	Line         int
 }
 
 func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
@@ -44,8 +44,9 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 
 	// create and save new doc
 	doc := &Document{
-		t:                    t,
-		identifierStrings:    make(map[string]bool),
+		t: t,
+		// identifierStrings:    make(map[string]bool),
+		Name:                 name,
 		Definitions:          newDefinitions(),
 		NamespaceForTarget:   make(map[TargetName]NamespaceName),
 		lastParsedLineNumber: -1,
@@ -192,32 +193,79 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			// done
 			break
 		}
+		countDefinitions++
 
-		//++ check if identifier is unique
+		currentDocLine := &DocLine{
+			DocumentName: doc.Name,
+			Line:         doc.lastParsedLineNumber,
+		}
+		words := strings.Fields(line)
 
-		if strings.HasPrefix(line, "const") { // 'const' FieldType Identifier '=' ConstValue ListSeparator?
+		switch words[0] {
+		case "const": // 'const' FieldType Identifier '=' ConstValue ListSeparator?
+			if len(words) != 5 {
+				return &ParseError{
+					Type:    ParseErrorTypeInvalidConstDefinition,
+					Message: "Invalid const definition.",
+					DocLine: currentDocLine,
+				}
+			}
+
+			//++ TODO: check field type
+
+			//++ TODO: regexp identifier
+
+			// check if identifier is unique
+
+			if i, exists := doc.Definitions.identifiers[IdentifierName(words[2])]; exists {
+				return &ParseError{
+					Type:    ParseErrorTypeDuplicateIdentifier,
+					Message: fmt.Sprintf("The given identifier has been declared before in this document. Previous declaration at line %d", i.DocLine.Line),
+					DocLine: currentDocLine,
+				}
+			}
+			// check that third word is an equal sign
+			if words[3] != "=" {
+				return &ParseError{
+					Type:    ParseErrorTypeInvalidConstDefinition,
+					Message: "Invalid const definition. Expecting '='.",
+					DocLine: currentDocLine,
+				}
+			}
+			// create constant instance
+			c := &Const{
+				Type: FieldType(words[1]),
+				Identifier: &Identifier{
+					Name:    IdentifierName(words[2]),
+					DocLine: currentDocLine,
+				},
+				Value: words[4],
+			}
+			// save identifier and constant
+			doc.Definitions.identifiers[c.Identifier.Name] = c.Identifier
+			doc.Definitions.Consts[c.Identifier.Name] = c
+
+		case "typedef": // 'typedef' DefinitionType Identifier
 			//++
-		} else if strings.HasPrefix(line, "typedef") { // 'typedef' DefinitionType Identifier
+		case "enum": // 'enum' Identifier '{' (Identifier ('=' IntConstant)? ListSeparator?)* '}'
 			//++
-		} else if strings.HasPrefix(line, "enum") { // 'enum' Identifier '{' (Identifier ('=' IntConstant)? ListSeparator?)* '}'
+		case "senum": // 'senum' Identifier '{' (Literal ListSeparator?)* '}'
 			//++
-		} else if strings.HasPrefix(line, "senum") { // 'senum' Identifier '{' (Literal ListSeparator?)* '}'
+		case "struct": // 'struct' Identifier 'xsd_all'? '{' Field* '}'
 			//++
-		} else if strings.HasPrefix(line, "struct") { // 'struct' Identifier 'xsd_all'? '{' Field* '}'
+		case "exception": // 'exception' Identifier '{' Field* '}'
 			//++
-		} else if strings.HasPrefix(line, "exception") { // 'exception' Identifier '{' Field* '}'
-			//++
-		} else if strings.HasPrefix(line, "service") { // 'service' Identifier ( 'extends' Identifier )? '{' Function* '}'		}
+		case "service": // 'service' Identifier ( 'extends' Identifier )? '{' Function* '}'		}
 			//++
 		}
-		fmt.Printf("definition: %s\n", line)
+		// fmt.Printf("definition: %s\n", line)
 	}
 
 	// it is required that the document contained definitions, otherwise return an error
 	if countDefinitions == 0 {
 		return &ParseError{
 			Type:    ParseErrorTypeNoDefinitionsFound,
-			Message: fmt.Sprintf("It looks like document '%s' contains no definitions.\n", doc.Name),
+			Message: fmt.Sprintf("No definitions found for document '%s'. This is an error.", doc.Name),
 		}
 	}
 

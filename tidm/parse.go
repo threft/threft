@@ -6,16 +6,17 @@ const (
 	ParseErrorTypeUnexpectedKeyword = ParseErrorType(iota)
 	ParseErrorTypeAlreadyParsed
 	ParseErrorTypeNoDefinitionsFound
+	ParseErrorTypeInvalidConstDefinition
+	ParseErrorTypeDuplicateIdentifier
 	ParseErrorTypeUnexpectedError
 )
 
 // ParseError contains information about a parse error
 // ParseError implements the go-builtin error interface
 type ParseError struct {
-	Type       ParseErrorType
-	SourceName string
-	SourceLine int
-	Message    string
+	Type    ParseErrorType // Type of error
+	Message string         // Error message
+	DocLine *DocLine       // DocLine where the problem has ocurred
 }
 
 // Error method to implement the go-builtin error interface

@@ -1,6 +1,7 @@
 package tidm
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 )
@@ -12,36 +13,28 @@ var (
 // The TIDM is the top-level object for Threft Interface Definition Model.
 // It contains documents and targets.
 type TIDM struct {
-	// open data
-	Documents map[DocumentName]*Document `json:"documents"` // List of all documents that belong to the full TIDM. Bool indicates document parse state
+	// exported fields, to be marshalled to tidm-json.
+	Documents map[DocumentName]*Document // List of all documents that belong to the full TIDM. Bool indicates document parse state
+	Targets   map[TargetName]*Target     // List of all targets that belong to the full TIDM. Value contains the namespaces for the target.
 
 	// stats for info and pretty printing
 	documentNameMaxLength int // Longest name, for pretty printing
 
 	// private stuff, must be populated
-	parsed      bool                   // true when TIDM was parsed
-	targetNames map[TargetName]bool    // list of known target names
-	targets     map[TargetName]*Target // List of all targets that belong to the full TIDM. Value contains the namespaces for the target.
+	parsed bool // true when TIDM was parsed
 }
 
 // newTIDM sets up a new and empty TIDM
 func newTIDM() *TIDM {
 	return &TIDM{
 		Documents: make(map[DocumentName]*Document),
-		targets:   make(map[TargetName]*Target),
+		Targets:   make(map[TargetName]*Target),
 	}
 }
 
 // Creates a new and emtpy TIDM object
 func NewTIDM() *TIDM {
 	return newTIDM()
-}
-
-// NewTIDMFromJson creates a new TIDM instance and populates it from JSON
-// It returns a normal error, not a parse-error because tidm-json should've been checked.
-func NewTIDMFromJson(jsonBytes []byte) (*TIDM, error) {
-	t := newTIDM()
-	return t, nil
 }
 
 // AddDocument adds a document to the TIDM docTree
@@ -91,6 +84,7 @@ func (t *TIDM) Parse() (perr *ParseError) {
 }
 
 // Target() returns a Target for given TargetName
+// If given TargetName does not exist, the default Target is returned.
 func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 	if !t.parsed {
 		return nil, ErrNotParsedYet
@@ -98,15 +92,31 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 
 	// get target from targets map
 	var exists bool
-	target, exists = t.targets[targetName]
+	target, exists = t.Targets[targetName]
 
-	// see if target exists, get default target if it doesnt.
+	// get default target if there is no target for given TargetName
 	if !exists {
-		//++ TODO: get default target
+		target = t.Targets[TargetNameDefault]
 	}
 
 	// all done
 	return target, nil
+}
+
+func (t *TIDM) WriteTo(w io.Writer) (err error) {
+	enc := json.NewEncoder(w)
+	err = enc.Encode(t)
+	return err
+}
+
+func ReadFrom(r io.Reader) (t *TIDM, err error) {
+	dec := json.NewDecoder(r)
+	err = dec.Decode(t)
+	if err != nil {
+		return nil, err
+	}
+	t.parsed = true
+	return t, nil
 }
 
 // create a target and populate it from documents
@@ -115,7 +125,7 @@ func (t *TIDM) populateTarget(targetName TargetName) (target *Target, perr *Pars
 
 	// create new empty target instance
 	target = newTarget(targetName)
-	t.targets[targetName] = target
+	t.Targets[targetName] = target
 
 	// loop through documents
 	for _, doc := range t.Documents {
