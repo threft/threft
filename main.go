@@ -35,7 +35,7 @@ func main() {
 
 	// check for unexpected arguments
 	if len(args) > 0 {
-		fmt.Println("Unknown argument '%s'.\n", args[0])
+		fmt.Printf("Unknown argument '%s'.\n", args[0])
 		return
 	}
 
@@ -197,7 +197,7 @@ func main() {
 	}
 
 	// write tidm-json to generator
-	err = t.WriteTo(stdinPipe)
+	err = t.EncodeTo(stdinPipe)
 	if err != nil {
 		fmt.Printf("Error writing data to generator: %s\n", err)
 		return

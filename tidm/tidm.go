@@ -64,15 +64,15 @@ func (t *TIDM) Const(ref ConstReference) (con *Const, err error) {
 	return con, nil
 }
 
-// write tidm-json to given writer
-func (t *TIDM) WriteTo(w io.Writer) (err error) {
+// Encode tidm-json to given writer
+func (t *TIDM) EncodeTo(w io.Writer) (err error) {
 	enc := json.NewEncoder(w)
 	err = enc.Encode(t)
 	return err
 }
 
-// read tidm-json from given reader
-func ReadFrom(r io.Reader) (t *TIDM, err error) {
+// Decode tidm-json from given reader
+func DecodeFrom(r io.Reader) (t *TIDM, err error) {
 	t = newTIDM()
 	dec := json.NewDecoder(r)
 	err = dec.Decode(t)
