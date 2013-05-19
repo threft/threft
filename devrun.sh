@@ -6,13 +6,13 @@ package main
  * the threft project.
  * Typical setup would be to clone all the repositories at github.com/threft into yourGoDevpath/src/github.com/threft/
  * This would give you the following directories
- * yourGoDevpath/src/github.com/threft/tidm
- * yourGoDevpath/src/github.com/threft/threft-gen-go-golden
- * yourGoDevpath/src/github.com/threft/threft-gen-go
- * yourGoDevpath/src/github.com/threft/threft.github.com
  * yourGoDevpath/src/github.com/threft/threft
+ * yourGoDevpath/src/github.com/threft/threft-gen-html
+ * yourGoDevpath/src/github.com/threft/threft-gen-go
+ * yourGoDevpath/src/github.com/threft/threft-gen-go-tests
+ * yourGoDevpath/src/github.com/threft/threft.github.io
  * The shebang instruction at the top of this file requires launchpad.net/gorun to be installed.
- * Use: `go get go get launchpad.net/gorun`
+ * Use: `go get launchpad.net/gorun`
  */
 
 import (
@@ -22,10 +22,12 @@ import (
 )
 
 var buildPkgs = []string{
-	"tidm",
-	"threft-gen-go/gen-go",
-	// "threft-gen-go",
 	"threft",
+	"threft/tidm",
+	"threft-gen-html",
+	"threft-gen-html/htmlg",
+	"threft-gen-go",
+	"threft-gen-go/gog",
 }
 
 func main() {
