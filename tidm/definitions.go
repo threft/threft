@@ -1,34 +1,5 @@
 package tidm
 
-// Definitions is a set of definitions with a unique identifier
-type Definitions struct {
-	// list of identifiers used in this set of Definitions
-	identifiers map[IdentifierName]*Identifier
-
-	// Actual definitions
-	Consts     map[IdentifierName]*Const
-	Typedefs   map[IdentifierName]*Typedef
-	Enums      map[IdentifierName]*Enums
-	Senums     map[IdentifierName]*Senum
-	Structs    map[IdentifierName]*Struct
-	Exceptions map[IdentifierName]*Exception
-	Services   map[IdentifierName]*Service
-}
-
-func newDefinitions() *Definitions {
-	return &Definitions{
-		identifiers: make(map[IdentifierName]*Identifier),
-
-		Consts:     make(map[IdentifierName]*Const),
-		Typedefs:   make(map[IdentifierName]*Typedef),
-		Enums:      make(map[IdentifierName]*Enums),
-		Senums:     make(map[IdentifierName]*Senum),
-		Structs:    make(map[IdentifierName]*Struct),
-		Exceptions: make(map[IdentifierName]*Exception),
-		Services:   make(map[IdentifierName]*Service),
-	}
-}
-
 //++ TODO: Add AddConst, AddTypedef, etc. methods that check if identifier is unique and then add the type and its identifier
 
 type FieldType string //++ TODO

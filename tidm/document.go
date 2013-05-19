@@ -21,13 +21,21 @@ type Document struct {
 	t *TIDM
 
 	Name               DocumentName                 // The name of this document.
-	Definitions        *Definitions                 // List of definitions in this document
 	NamespaceForTarget map[TargetName]NamespaceName // List of namespaces (per target) this document describes
 
-	// source management
-	// identifierStrings    map[string]bool // All identifiers in this document
-	lines                []string // All source lines for this document. Whitespace is trimmed.
-	lastParsedLineNumber int      // line number of the last parsed line. Used by nextMeaningfulLine().
+	// Definitions in this document
+	Consts     map[IdentifierName]*Const
+	Typedefs   map[IdentifierName]*Typedef
+	Enums      map[IdentifierName]*Enums
+	Senums     map[IdentifierName]*Senum
+	Structs    map[IdentifierName]*Struct
+	Exceptions map[IdentifierName]*Exception
+	Services   map[IdentifierName]*Service
+
+	// source & parse management
+	identifiers          map[IdentifierName]*Identifier // list of identifiers used in this document, used to check uniqueness
+	lines                []string                       // All source lines for this document.
+	lastParsedLineNumber int                            // line number of the last parsed line. Used by nextMeaningfulLine().
 }
 
 // DocLine is a reference to a thrift idl document and the source line number
@@ -45,17 +53,26 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 	// create and save new doc
 	doc := &Document{
 		t: t,
-		// identifierStrings:    make(map[string]bool),
-		Name:                 name,
-		Definitions:          newDefinitions(),
-		NamespaceForTarget:   make(map[TargetName]NamespaceName),
+
+		Name:               name,
+		NamespaceForTarget: make(map[TargetName]NamespaceName),
+
+		Consts:     make(map[IdentifierName]*Const),
+		Typedefs:   make(map[IdentifierName]*Typedef),
+		Enums:      make(map[IdentifierName]*Enums),
+		Senums:     make(map[IdentifierName]*Senum),
+		Structs:    make(map[IdentifierName]*Struct),
+		Exceptions: make(map[IdentifierName]*Exception),
+		Services:   make(map[IdentifierName]*Service),
+
+		identifiers:          make(map[IdentifierName]*Identifier),
 		lastParsedLineNumber: -1,
 	}
 	doc.lines = append(doc.lines, "") // add empty line to skip line 0.
 	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".thrift", "", -1))
 	t.Documents[name] = doc
 
-	// set max doc filename length 
+	// set max doc filename length
 	if len(name) > t.documentNameMaxLength {
 		t.documentNameMaxLength = len(name)
 	}
@@ -217,7 +234,7 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			//++ TODO: regexp identifier
 
 			// check if identifier is unique
-			if i, exists := doc.Definitions.identifiers[IdentifierName(words[2])]; exists {
+			if i, exists := doc.identifiers[IdentifierName(words[2])]; exists {
 				return &ParseError{
 					Type:    ParseErrorTypeDuplicateIdentifier,
 					Message: fmt.Sprintf("The given identifier has been declared before in this document. Previous declaration at line %d", i.DocLine.Line),
@@ -242,8 +259,8 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 				Value: words[4],
 			}
 			// save identifier and constant
-			doc.Definitions.identifiers[c.Identifier.Name] = c.Identifier
-			doc.Definitions.Consts[c.Identifier.Name] = c
+			doc.identifiers[c.Identifier.Name] = c.Identifier
+			doc.Consts[c.Identifier.Name] = c
 
 		case "typedef": // 'typedef' DefinitionType Identifier
 			//++

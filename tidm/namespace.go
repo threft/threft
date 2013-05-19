@@ -9,10 +9,22 @@ type NamespaceName string
 
 // Namespace defines a set of definitions with unique identifiers within a single scope.
 type Namespace struct {
-	target *Target
+	// target for this namespace
+	target *Target //++ TODO: remove this? is this ever used?
 
-	Name        NamespaceName // the name of this namespace
-	Definitions *Definitions  // definitions within this namespace
+	Name NamespaceName // the name of this namespace
+
+	// References to definitions this namespace contains
+	ConstReferences     map[IdentifierName]*ConstReference
+	TypedefReferences   map[IdentifierName]*TypedefReference
+	EnumReferences      map[IdentifierName]*EnumReference
+	SenumReferences     map[IdentifierName]*SenumReference
+	StructReferences    map[IdentifierName]*StructReference
+	ExceptionReferences map[IdentifierName]*ExceptionReference
+	ServiceReferences   map[IdentifierName]*ServiceReference
+
+	// source & parse management
+	identifiers map[IdentifierName]*Identifier // list of identifiers used in this namespace, used to check uniqueness
 }
 
 // create a new (empty) namespace for the target
@@ -26,8 +38,17 @@ func (target *Target) newNamespace(name NamespaceName) (*Namespace, error) {
 	// create and save new namespace
 	newNamespace := &Namespace{
 		target:      target,
-		Name:        name,
-		Definitions: newDefinitions(),
+		identifiers: make(map[IdentifierName]*Identifier),
+
+		Name: name,
+
+		ConstReferences:     make(map[IdentifierName]*ConstReference),
+		TypedefReferences:   make(map[IdentifierName]*TypedefReference),
+		EnumReferences:      make(map[IdentifierName]*EnumReference),
+		SenumReferences:     make(map[IdentifierName]*SenumReference),
+		StructReferences:    make(map[IdentifierName]*StructReference),
+		ExceptionReferences: make(map[IdentifierName]*ExceptionReference),
+		ServiceReferences:   make(map[IdentifierName]*ServiceReference),
 	}
 	target.Namespaces[name] = newNamespace
 

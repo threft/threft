@@ -6,15 +6,16 @@ import (
 	"github.com/threft/threft/tidm"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
 var options struct {
-	Debugging    bool     `short:"d" long:"debug" description:"Enable logging of debug messages to StdOut"`
-	InputFiles   []string `short:"i" long:"input" description:"Input folders/files"`
-	Generator    string   `short:"g" long:"gen" description:"Generator to use (for example: go, html), can include arguments for generator"`
-	OutputFolder string   `short:"o" long:"output" description:"Folder to generate code to"`
-	DumpTIDM     bool     `long:"dump-tidm" description:"Dumps TIDM structure to ./tidm_dump"`
+	Debugging  bool     `short:"d" long:"debug" description:"Enable logging of debug messages to StdOut"`
+	InputFiles []string `short:"i" long:"input" description:"Input folders/files"`
+	Generator  string   `short:"g" long:"gen" description:"Generator to use (for example: go, html), can include arguments for generator"`
+	OutputDir  string   `short:"o" long:"output" description:"Folder to generate code to"`
+	DumpTIDM   bool     `long:"dump-tidm" description:"Dumps TIDM structure to ./tidm_dump"`
 }
 
 func main() {
@@ -31,14 +32,27 @@ func main() {
 		fmt.Printf("Error parsing flags: %s\n", err)
 		return
 	}
-	// options are all hardcoded for now.
-	fmt.Println("Debug mode enabled.")
-	options.Debugging = true
 
 	// check for unexpected arguments
 	if len(args) > 0 {
 		fmt.Println("Unknown argument '%s'.\n", args[0])
 		return
+	}
+
+	// hardcode debugging enable
+	fmt.Println("Debug mode enabled, hardcoded in code.")
+	options.Debugging = true
+
+	var outputDir string
+	if options.OutputDir[0] == '/' {
+		outputDir = options.OutputDir
+	} else {
+		wd, err := os.Getwd()
+		if err != nil {
+			fmt.Printf("Unable to get wd: %s\n", err)
+			return
+		}
+		outputDir = path.Join(wd, options.OutputDir)
 	}
 
 	// create slice to store all filenames in..
@@ -164,6 +178,7 @@ func main() {
 
 	// prepare generator command
 	genCmd := exec.Command("threft-gen-"+genFields[0], genFields[1:]...)
+	genCmd.Dir = outputDir
 	genCmd.Stderr = os.Stderr
 	genCmd.Stdout = os.Stdout
 

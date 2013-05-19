@@ -38,6 +38,32 @@ func NewTIDM() *TIDM {
 	return newTIDM()
 }
 
+// Document returns a *Document for given Reference, or an error when Document cannot be found.
+func (t *TIDM) Document(ref Reference) (doc *Document, err error) {
+	var exists bool
+	doc, exists = t.Documents[ref.DocumentName]
+	if !exists {
+		return nil, errors.New("Document for given Reference does not exist.")
+	}
+	return doc, nil
+}
+
+// Const returns a *Const for given ConstReference, or an error when Const cannot be found.
+func (t *TIDM) Const(ref ConstReference) (con *Const, err error) {
+	var doc *Document
+	doc, err = t.Document(Reference(ref))
+	if err != nil {
+		return nil, err
+	}
+
+	var exists bool
+	con, exists = doc.Consts[ref.IdentifierName]
+	if !exists {
+		return nil, errors.New("Const for given ConstReference does not exist.")
+	}
+	return con, nil
+}
+
 // write tidm-json to given writer
 func (t *TIDM) WriteTo(w io.Writer) (err error) {
 	enc := json.NewEncoder(w)
@@ -163,8 +189,8 @@ func (t *TIDM) populateTarget(targetName TargetName) (perr *ParseError) {
 		}
 
 		// check if identifiers from this doc can 'fit' in target namespace
-		for _, newIdentifier := range doc.Definitions.identifiers {
-			if existingIdentifier, exists := namespace.Definitions.identifiers[newIdentifier.Name]; exists {
+		for _, newIdentifier := range doc.identifiers {
+			if existingIdentifier, exists := namespace.identifiers[newIdentifier.Name]; exists {
 				return &ParseError{
 					Type:    ParseErrorTypeDuplicateIdentifier,
 					Message: fmt.Sprintf("The identifier '%s' is not unique for %s. Previous declaration at %s:%d", existingIdentifier.Name, namespace.FullName(), existingIdentifier.DocLine.DocumentName, existingIdentifier.DocLine.Line),
@@ -174,9 +200,9 @@ func (t *TIDM) populateTarget(targetName TargetName) (perr *ParseError) {
 		}
 
 		// add const definitions to target namespace
-		for _, c := range doc.Definitions.Consts {
-			namespace.Definitions.identifiers[c.Identifier.Name] = c.Identifier
-			namespace.Definitions.Consts[c.Identifier.Name] = c
+		for _, c := range doc.Consts {
+			namespace.identifiers[c.Identifier.Name] = c.Identifier
+			namespace.ConstReferences[c.Identifier.Name] = &ConstReference{doc.Name, c.Identifier.Name}
 		}
 
 		//++ add other definitions to target namespace
