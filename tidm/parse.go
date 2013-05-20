@@ -9,6 +9,7 @@ const (
 	ParseErrorTypeInvalidConstDefinition
 	ParseErrorTypeDuplicateIdentifier
 	ParseErrorTypeUnexpectedError
+	ParseErrorNotSupported
 )
 
 // ParseError contains information about a parse error

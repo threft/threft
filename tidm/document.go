@@ -266,11 +266,19 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			doc.Consts[c.Identifier.Name] = c
 
 		case "typedef": // 'typedef' DefinitionType Identifier
-			//++
+			return &ParseError{
+				Type:    ParseErrorNotSupported,
+				Message: "Error: typedef is not supported right now.",
+				DocLine: currentDocLine,
+			}
 		case "enum": // 'enum' Identifier '{' (Identifier ('=' IntConstant)? ListSeparator?)* '}'
 			//++
 		case "senum": // 'senum' Identifier '{' (Literal ListSeparator?)* '}'
-			//++
+			return &ParseError{
+				Type:    ParseErrorNotSupported,
+				Message: "Error: senum is not supported right now.",
+				DocLine: currentDocLine,
+			}
 		case "struct": // 'struct' Identifier 'xsd_all'? '{' Field* '}'
 			//++
 		case "exception": // 'exception' Identifier '{' Field* '}'
