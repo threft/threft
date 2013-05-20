@@ -7,8 +7,6 @@ type TargetName string
 
 const (
 	TargetNameDefault = TargetName("*")
-	TargetNameHtml    = TargetName("html")
-	TargetNameGo      = TargetName("go")
 )
 
 // Target defines a set of namespaces within a target.

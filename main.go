@@ -157,7 +157,8 @@ func main() {
 	// parse complete TIDM structure (each document, each target, each namespace)
 	perr := t.Parse()
 	if perr != nil {
-		fmt.Printf("\nError in %s:%d\n \t%s\n", perr.DocLine.DocumentName, perr.DocLine.Line, perr.Message)
+		fmt.Printf("\nError at %s\n \t%s\n", perr.DocLine, perr.Message)
+		return
 	}
 
 	// do a TIDM dump if requested by user

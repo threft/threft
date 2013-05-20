@@ -193,7 +193,7 @@ func (t *TIDM) populateTarget(targetName TargetName) (perr *ParseError) {
 			if existingIdentifier, exists := namespace.identifiers[newIdentifier.Name]; exists {
 				return &ParseError{
 					Type:    ParseErrorTypeDuplicateIdentifier,
-					Message: fmt.Sprintf("The identifier '%s' is not unique for %s. Previous declaration at %s:%d", existingIdentifier.Name, namespace.FullName(), existingIdentifier.DocLine.DocumentName, existingIdentifier.DocLine.Line),
+					Message: fmt.Sprintf("The identifier '%s' is not unique for %s. Previous declaration at %s", existingIdentifier.Name, namespace.FullName(), existingIdentifier.DocLine),
 					DocLine: newIdentifier.DocLine,
 				}
 			}

@@ -15,6 +15,16 @@ var (
 // DocumentName represents any documentname, this can be anything (filename, random string, "stdin", etc.)
 type DocumentName string
 
+// DocLine is a reference to a thrift idl document and the source line number
+type DocLine struct {
+	DocumentName DocumentName
+	Line         int
+}
+
+func (dl DocLine) String() string {
+	return fmt.Sprintf("%s:%d", dl.DocumentName, dl.Line+1)
+}
+
 // Document can be any thrift definition language source (filename, StdIn, etc.)
 // A document is created by this package. See TIDM.AddDocument()
 type Document struct {
@@ -36,12 +46,6 @@ type Document struct {
 	identifiers          map[IdentifierName]*Identifier // list of identifiers used in this document, used to check uniqueness
 	lines                []string                       // All source lines for this document.
 	lastParsedLineNumber int                            // line number of the last parsed line. Used by nextMeaningfulLine().
-}
-
-// DocLine is a reference to a thrift idl document and the source line number
-type DocLine struct {
-	DocumentName DocumentName
-	Line         int
 }
 
 func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
@@ -68,7 +72,6 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 		identifiers:          make(map[IdentifierName]*Identifier),
 		lastParsedLineNumber: -1,
 	}
-	doc.lines = append(doc.lines, "") // add empty line to skip line 0.
 	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".thrift", "", -1))
 	t.Documents[name] = doc
 
@@ -105,7 +108,7 @@ func (t *TIDM) newDocumentFromReader(name DocumentName, sourceInput io.Reader) (
 			break
 		}
 	addLine:
-		doc.lines = append(doc.lines, strings.TrimSpace(line))
+		doc.lines = append(doc.lines, line)
 	}
 
 	// all done
@@ -164,12 +167,12 @@ func (doc *Document) parseDocumentHeaders() (perr *ParseError) {
 		switch fields[0] {
 		case "include":
 			// not supporting cross-document references (yet?).
-			fmt.Printf("Ignoring include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber)
+			fmt.Printf("Ignoring include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber+1)
 			continue
 
 		case "cpp_include":
 			// not supporting cpp inclusion (yet?).
-			fmt.Printf("Ignoring cpp_include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber)
+			fmt.Printf("Ignoring cpp_include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber+1)
 			continue
 
 		case "namespace":
@@ -237,7 +240,7 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			if i, exists := doc.identifiers[IdentifierName(words[2])]; exists {
 				return &ParseError{
 					Type:    ParseErrorTypeDuplicateIdentifier,
-					Message: fmt.Sprintf("The given identifier has been declared before in this document. Previous declaration at line %d", i.DocLine.Line),
+					Message: fmt.Sprintf("The given identifier has been declared before in this document. Previous declaration at %s", i.DocLine),
 					DocLine: currentDocLine,
 				}
 			}
