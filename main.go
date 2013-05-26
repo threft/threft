@@ -6,7 +6,7 @@ import (
 	"github.com/threft/threft/tidm"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,6 +18,47 @@ var options struct {
 	DumpTIDM   bool     `long:"dump-tidm" description:"Dumps TIDM structure to ./tidm_dump"`
 }
 
+func exitWithError(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+	os.Exit(2)
+}
+
+func scanDir(path string) (filenames []string) {
+	// TODO if turning this function back into a recursive function,
+	// either pass an initial filenames slice as an argument, or
+	// append() all resulting slices into one.
+
+	// open given path
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("Error opening '%s': %s\n", path, err)
+		return
+	}
+
+	// read fileInfo for all files/folders
+	fis, err := f.Readdir(-1)
+	if err != nil {
+		fmt.Printf("Error reading dir info on '%s': %s\n", path, err)
+		return
+	}
+	// loop through all files/folders
+	for _, fi := range fis {
+		foundFile := filepath.Join(path, fi.Name())
+		if fi.IsDir() {
+			// disabled, not doing recursive now..
+			// // recursive scan dir
+			// err := scanDir(foundFile)
+			// if err != nil {
+			//	return err
+			// }
+		} else if strings.HasSuffix(foundFile, ".thrift") {
+			// found a .thrift file
+			filenames = append(filenames, foundFile)
+		}
+	}
+	return
+}
+
 func main() {
 	args, err := flags.Parse(&options)
 	if err != nil {
@@ -27,32 +68,25 @@ func main() {
 		}
 		if flagError.Type == flags.ErrUnknownFlag {
 			fmt.Println("Use --help to view all available options.")
-			return
+			os.Exit(1)
 		}
 		fmt.Printf("Error parsing flags: %s\n", err)
-		return
+		os.Exit(1)
 	}
 
 	// check for unexpected arguments
 	if len(args) > 0 {
 		fmt.Printf("Unknown argument '%s'.\n", args[0])
-		return
+		os.Exit(1)
 	}
 
 	// hardcode debugging enable
 	fmt.Println("Debug mode enabled, hardcoded in code.")
 	options.Debugging = true
 
-	var outputDir string
-	if options.OutputDir[0] == '/' {
-		outputDir = options.OutputDir
-	} else {
-		wd, err := os.Getwd()
-		if err != nil {
-			fmt.Printf("Unable to get wd: %s\n", err)
-			return
-		}
-		outputDir = path.Join(wd, options.OutputDir)
+	outputDir, err := filepath.Abs(options.OutputDir)
+	if err != nil {
+		exitWithError("Error getting absolute path for '%s': %s\n", options.OutputDir, err)
 	}
 
 	// create slice to store all filenames in..
@@ -60,56 +94,19 @@ func main() {
 
 	fmt.Println("Searching for thrift files and setting up documents.")
 	for _, filefolder := range options.InputFiles {
-		if filefolder[0:1] != string(os.PathSeparator) {
-			pwd := os.Getenv("PWD")
-			filefolder = pwd + string(os.PathSeparator) + filefolder
+		filefolder, err = filepath.Abs(filefolder)
+		if err != nil {
+			exitWithError("Error getting absolute path for '%s': %s\n", filefolder, err)
 		}
 
 		fi, err := os.Stat(filefolder)
 		if err != nil {
-			fmt.Printf("Error getting info on '%s': %s\n", filefolder, err)
-			return
+			exitWithError("Error getting info on '%s': %s\n", filefolder, err)
 		}
 
 		if fi.IsDir() {
-			// remove an eventual path seperator on the right
-			filefolder = strings.TrimRight(filefolder, string(os.PathSeparator))
-
-			// setup recursive scan method
-			var scanDir func(path string)
-			scanDir = func(path string) {
-				// open given path
-				f, err := os.Open(path)
-				if err != nil {
-					fmt.Printf("Error opening '%s': %s\n", path, err)
-					return
-				}
-
-				// read fileInfo for all files/folders
-				fis, err := f.Readdir(-1)
-				if err != nil {
-					fmt.Printf("Error reading dir info on '%s': %s\n", path, err)
-				}
-				// loop through all files/folders
-				for _, fi := range fis {
-					foundFile := path + string(os.PathSeparator) + fi.Name()
-					if fi.IsDir() {
-						// disabled, not doing recursive now..
-						// // recursive scan dir
-						// err := scanDir(foundFile)
-						// if err != nil {
-						// 	return err
-						// }
-					} else if strings.HasSuffix(foundFile, ".thrift") {
-						// found a .thrift file
-						filenames = append(filenames, foundFile)
-					}
-				}
-				return
-			}
-
 			// do recursive file find
-			scanDir(filefolder)
+			filenames = scanDir(filefolder)
 
 			// print findings
 			fmt.Printf("Found %d files in given path '%s'.\n", len(filenames), filefolder)
@@ -121,8 +118,7 @@ func main() {
 			// only one file given
 			// check if file is thrift file
 			if !strings.HasSuffix(filefolder, ".thrift") {
-				fmt.Printf("Error: invalid file extension for '%s' (expected .thrift).", filefolder)
-				return
+				exitWithError("Error: invalid file extension for '%s' (expected .thrift).\n", filefolder)
 			}
 
 			// add filename to list
@@ -138,8 +134,7 @@ func main() {
 		// assuming file name is correct and file is existing.
 		file, err := os.Open(filename)
 		if err != nil {
-			fmt.Printf("Error opening file. %s\n", err)
-			return
+			exitWithError("Error opening file. %s\n", err)
 		}
 		defer file.Close()
 
@@ -148,8 +143,7 @@ func main() {
 		documentNameString := filename[lastPathSeperator+1:]
 		err = t.AddDocument(tidm.DocumentName(documentNameString), file)
 		if err != nil {
-			fmt.Printf("Error adding document to TIDM: %s\n", err)
-			return
+			exitWithError("Error adding document to TIDM: %s\n", err)
 		}
 		file.Close()
 	}
@@ -157,24 +151,23 @@ func main() {
 	// parse complete TIDM structure (each document, each target, each namespace)
 	perr := t.Parse()
 	if perr != nil {
-		fmt.Printf("\nError at %s\n \t%s\n", perr.DocLine, perr.Message)
-		return
+		exitWithError("\nError at %s\n \t%s\n", perr.DocLine, perr.Message)
 	}
 
 	// do a TIDM dump if requested by user
 	if options.DumpTIDM {
 		err = dumpTIDM(t)
 		if err != nil {
-			fmt.Println(err)
-			return
+			// TODO output a formatted message like in all other
+			// cases?
+			exitWithError("%s\n", err)
 		}
 	}
 
 	// get generator fields (possibly options)
 	genFields := strings.Fields(options.Generator)
 	if len(genFields) == 0 {
-		fmt.Println("No generator given. Can not continue. Use -g to generate code.")
-		return
+		exitWithError("%s", "No generator given. Can not continue. Use -g to generate code.\n")
 	}
 
 	// prepare generator command
@@ -186,22 +179,19 @@ func main() {
 	// get stdinPipe to send json when process has started
 	stdinPipe, err := genCmd.StdinPipe()
 	if err != nil {
-		fmt.Printf("Error getting stdin pipe: %s\n", err)
-		return
+		exitWithError("Error getting stdin pipe: %s\n", err)
 	}
 
 	// start generator
 	err = genCmd.Start()
 	if err != nil {
-		fmt.Printf("Error on starting generator: %s\n", err)
-		return
+		exitWithError("Error on starting generator: %s\n", err)
 	}
 
 	// write tidm-json to generator
 	err = t.EncodeTo(stdinPipe)
 	if err != nil {
-		fmt.Printf("Error writing data to generator: %s\n", err)
-		return
+		exitWithError("Error writing data to generator: %s\n", err)
 	}
 
 	// close the stdinPipe
@@ -213,8 +203,7 @@ func main() {
 	// wait for generator to exit
 	err = genCmd.Wait()
 	if err != nil {
-		fmt.Printf("Error while running generator: %s\n", err)
-		return
+		exitWithError("Error while running generator: %s\n", err)
 	}
 
 	fmt.Println("All done.")
