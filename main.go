@@ -83,6 +83,7 @@ func main() {
 				fis, err := f.Readdir(-1)
 				if err != nil {
 					fmt.Printf("Error reading dir info on '%s': %s\n", path, err)
+					return
 				}
 				// loop through all files/folders
 				for _, fi := range fis {
