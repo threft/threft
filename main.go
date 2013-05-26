@@ -23,6 +23,42 @@ func exitWithError(format string, args ...interface{}) {
 	os.Exit(2)
 }
 
+func scanDir(path string) (filenames []string) {
+	// TODO if turning this function back into a recursive function,
+	// either pass an initial filenames slice as an argument, or
+	// append() all resulting slices into one.
+
+	// open given path
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("Error opening '%s': %s\n", path, err)
+		return
+	}
+
+	// read fileInfo for all files/folders
+	fis, err := f.Readdir(-1)
+	if err != nil {
+		fmt.Printf("Error reading dir info on '%s': %s\n", path, err)
+		return
+	}
+	// loop through all files/folders
+	for _, fi := range fis {
+		foundFile := filepath.Join(path, fi.Name())
+		if fi.IsDir() {
+			// disabled, not doing recursive now..
+			// // recursive scan dir
+			// err := scanDir(foundFile)
+			// if err != nil {
+			//	return err
+			// }
+		} else if strings.HasSuffix(foundFile, ".thrift") {
+			// found a .thrift file
+			filenames = append(filenames, foundFile)
+		}
+	}
+	return
+}
+
 func main() {
 	args, err := flags.Parse(&options)
 	if err != nil {
@@ -69,42 +105,8 @@ func main() {
 		}
 
 		if fi.IsDir() {
-			// setup recursive scan method
-			var scanDir func(path string)
-			scanDir = func(path string) {
-				// open given path
-				f, err := os.Open(path)
-				if err != nil {
-					fmt.Printf("Error opening '%s': %s\n", path, err)
-					return
-				}
-
-				// read fileInfo for all files/folders
-				fis, err := f.Readdir(-1)
-				if err != nil {
-					fmt.Printf("Error reading dir info on '%s': %s\n", path, err)
-					return
-				}
-				// loop through all files/folders
-				for _, fi := range fis {
-					foundFile := filepath.Join(path, fi.Name())
-					if fi.IsDir() {
-						// disabled, not doing recursive now..
-						// // recursive scan dir
-						// err := scanDir(foundFile)
-						// if err != nil {
-						//	return err
-						// }
-					} else if strings.HasSuffix(foundFile, ".thrift") {
-						// found a .thrift file
-						filenames = append(filenames, foundFile)
-					}
-				}
-				return
-			}
-
 			// do recursive file find
-			scanDir(filefolder)
+			filenames = scanDir(filefolder)
 
 			// print findings
 			fmt.Printf("Found %d files in given path '%s'.\n", len(filenames), filefolder)
