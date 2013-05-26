@@ -6,7 +6,7 @@ import (
 	"github.com/threft/threft/tidm"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -43,16 +43,10 @@ func main() {
 	fmt.Println("Debug mode enabled, hardcoded in code.")
 	options.Debugging = true
 
-	var outputDir string
-	if options.OutputDir[0] == '/' {
-		outputDir = options.OutputDir
-	} else {
-		wd, err := os.Getwd()
-		if err != nil {
-			fmt.Printf("Unable to get wd: %s\n", err)
-			return
-		}
-		outputDir = path.Join(wd, options.OutputDir)
+	outputDir, err := filepath.Abs(options.OutputDir)
+	if err != nil {
+		fmt.Printf("Error getting absolute path for '%s': %s\n", options.OutputDir, err)
+		return
 	}
 
 	// create slice to store all filenames in..
@@ -60,9 +54,10 @@ func main() {
 
 	fmt.Println("Searching for thrift files and setting up documents.")
 	for _, filefolder := range options.InputFiles {
-		if filefolder[0:1] != string(os.PathSeparator) {
-			pwd := os.Getenv("PWD")
-			filefolder = pwd + string(os.PathSeparator) + filefolder
+		filefolder, err = filepath.Abs(filefolder)
+		if err != nil {
+			fmt.Printf("Error getting absolute path for '%s': %s\n", filefolder, err)
+			return
 		}
 
 		fi, err := os.Stat(filefolder)
@@ -72,9 +67,6 @@ func main() {
 		}
 
 		if fi.IsDir() {
-			// remove an eventual path seperator on the right
-			filefolder = strings.TrimRight(filefolder, string(os.PathSeparator))
-
 			// setup recursive scan method
 			var scanDir func(path string)
 			scanDir = func(path string) {
@@ -92,7 +84,7 @@ func main() {
 				}
 				// loop through all files/folders
 				for _, fi := range fis {
-					foundFile := path + string(os.PathSeparator) + fi.Name()
+					foundFile := filepath.Join(path, fi.Name())
 					if fi.IsDir() {
 						// disabled, not doing recursive now..
 						// // recursive scan dir
