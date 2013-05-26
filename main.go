@@ -116,7 +116,7 @@ func main() {
 			// only one file given
 			// check if file is thrift file
 			if !strings.HasSuffix(filefolder, ".thrift") {
-				exitWithError("Error: invalid file extension for '%s' (expected .thrift).", filefolder)
+				exitWithError("Error: invalid file extension for '%s' (expected .thrift).\n", filefolder)
 			}
 
 			// add filename to list
@@ -158,14 +158,14 @@ func main() {
 		if err != nil {
 			// TODO output a formatted message like in all other
 			// cases?
-			exitWithError("%s", err)
+			exitWithError("%s\n", err)
 		}
 	}
 
 	// get generator fields (possibly options)
 	genFields := strings.Fields(options.Generator)
 	if len(genFields) == 0 {
-		exitWithError("%s", "No generator given. Can not continue. Use -g to generate code.")
+		exitWithError("%s", "No generator given. Can not continue. Use -g to generate code.\n")
 	}
 
 	// prepare generator command
