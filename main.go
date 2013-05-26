@@ -18,6 +18,11 @@ var options struct {
 	DumpTIDM   bool     `long:"dump-tidm" description:"Dumps TIDM structure to ./tidm_dump"`
 }
 
+func exitWithError(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+	os.Exit(2)
+}
+
 func main() {
 	args, err := flags.Parse(&options)
 	if err != nil {
@@ -27,16 +32,16 @@ func main() {
 		}
 		if flagError.Type == flags.ErrUnknownFlag {
 			fmt.Println("Use --help to view all available options.")
-			return
+			os.Exit(1)
 		}
 		fmt.Printf("Error parsing flags: %s\n", err)
-		return
+		os.Exit(1)
 	}
 
 	// check for unexpected arguments
 	if len(args) > 0 {
 		fmt.Printf("Unknown argument '%s'.\n", args[0])
-		return
+		os.Exit(1)
 	}
 
 	// hardcode debugging enable
@@ -45,8 +50,7 @@ func main() {
 
 	outputDir, err := filepath.Abs(options.OutputDir)
 	if err != nil {
-		fmt.Printf("Error getting absolute path for '%s': %s\n", options.OutputDir, err)
-		return
+		exitWithError("Error getting absolute path for '%s': %s\n", options.OutputDir, err)
 	}
 
 	// create slice to store all filenames in..
@@ -56,14 +60,12 @@ func main() {
 	for _, filefolder := range options.InputFiles {
 		filefolder, err = filepath.Abs(filefolder)
 		if err != nil {
-			fmt.Printf("Error getting absolute path for '%s': %s\n", filefolder, err)
-			return
+			exitWithError("Error getting absolute path for '%s': %s\n", filefolder, err)
 		}
 
 		fi, err := os.Stat(filefolder)
 		if err != nil {
-			fmt.Printf("Error getting info on '%s': %s\n", filefolder, err)
-			return
+			exitWithError("Error getting info on '%s': %s\n", filefolder, err)
 		}
 
 		if fi.IsDir() {
@@ -113,8 +115,7 @@ func main() {
 			// only one file given
 			// check if file is thrift file
 			if !strings.HasSuffix(filefolder, ".thrift") {
-				fmt.Printf("Error: invalid file extension for '%s' (expected .thrift).", filefolder)
-				return
+				exitWithError("Error: invalid file extension for '%s' (expected .thrift).", filefolder)
 			}
 
 			// add filename to list
@@ -130,8 +131,7 @@ func main() {
 		// assuming file name is correct and file is existing.
 		file, err := os.Open(filename)
 		if err != nil {
-			fmt.Printf("Error opening file. %s\n", err)
-			return
+			exitWithError("Error opening file. %s\n", err)
 		}
 		defer file.Close()
 
@@ -140,8 +140,7 @@ func main() {
 		documentNameString := filename[lastPathSeperator+1:]
 		err = t.AddDocument(tidm.DocumentName(documentNameString), file)
 		if err != nil {
-			fmt.Printf("Error adding document to TIDM: %s\n", err)
-			return
+			exitWithError("Error adding document to TIDM: %s\n", err)
 		}
 		file.Close()
 	}
@@ -149,24 +148,23 @@ func main() {
 	// parse complete TIDM structure (each document, each target, each namespace)
 	perr := t.Parse()
 	if perr != nil {
-		fmt.Printf("\nError at %s\n \t%s\n", perr.DocLine, perr.Message)
-		return
+		exitWithError("\nError at %s\n \t%s\n", perr.DocLine, perr.Message)
 	}
 
 	// do a TIDM dump if requested by user
 	if options.DumpTIDM {
 		err = dumpTIDM(t)
 		if err != nil {
-			fmt.Println(err)
-			return
+			// TODO output a formatted message like in all other
+			// cases?
+			exitWithError("%s", err)
 		}
 	}
 
 	// get generator fields (possibly options)
 	genFields := strings.Fields(options.Generator)
 	if len(genFields) == 0 {
-		fmt.Println("No generator given. Can not continue. Use -g to generate code.")
-		return
+		exitWithError("%s", "No generator given. Can not continue. Use -g to generate code.")
 	}
 
 	// prepare generator command
@@ -178,22 +176,19 @@ func main() {
 	// get stdinPipe to send json when process has started
 	stdinPipe, err := genCmd.StdinPipe()
 	if err != nil {
-		fmt.Printf("Error getting stdin pipe: %s\n", err)
-		return
+		exitWithError("Error getting stdin pipe: %s\n", err)
 	}
 
 	// start generator
 	err = genCmd.Start()
 	if err != nil {
-		fmt.Printf("Error on starting generator: %s\n", err)
-		return
+		exitWithError("Error on starting generator: %s\n", err)
 	}
 
 	// write tidm-json to generator
 	err = t.EncodeTo(stdinPipe)
 	if err != nil {
-		fmt.Printf("Error writing data to generator: %s\n", err)
-		return
+		exitWithError("Error writing data to generator: %s\n", err)
 	}
 
 	// close the stdinPipe
@@ -205,8 +200,7 @@ func main() {
 	// wait for generator to exit
 	err = genCmd.Wait()
 	if err != nil {
-		fmt.Printf("Error while running generator: %s\n", err)
-		return
+		exitWithError("Error while running generator: %s\n", err)
 	}
 
 	fmt.Println("All done.")
