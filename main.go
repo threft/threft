@@ -19,7 +19,7 @@ var options struct {
 }
 
 func exitWithError(format string, args ...interface{}) {
-	fmt.Printf(format, args...)
+	fmt.Fprintf(os.Stderr, format, args...)
 	os.Exit(2)
 }
 
