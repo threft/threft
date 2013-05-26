@@ -98,7 +98,7 @@ func main() {
 						// // recursive scan dir
 						// err := scanDir(foundFile)
 						// if err != nil {
-						// 	return err
+						//	return err
 						// }
 					} else if strings.HasSuffix(foundFile, ".thrift") {
 						// found a .thrift file
