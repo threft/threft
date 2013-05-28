@@ -1,0 +1,3 @@
+[submodule "testfiles/evernote"]
+	path = testfiles/evernote
+	url = git@github.com:threft/evernote-thrift.git
