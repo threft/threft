@@ -12,7 +12,9 @@ const (
 	ParseErrorTypeUnexpectedKeyword = ParseErrorType(iota)
 	ParseErrorTypeAlreadyParsed
 	ParseErrorTypeNoDefinitionsFound
+	ParseErrorTypeInvalidTypedefDefinition
 	ParseErrorTypeInvalidConstDefinition
+	ParseErrorTypeInvalidIdentifier
 	ParseErrorTypeDuplicateIdentifier
 	ParseErrorTypeUnexpectedError
 	ParseErrorNotSupported
@@ -144,7 +146,37 @@ func (doc *Document) parseDocumentDefinitions() *ParseError {
 		words := strings.Fields(line)
 
 		switch words[0] {
-		case "const": // 'const' FieldType Identifier '=' ConstValue ListSeparator?
+		case "typedef": // Typedef = "typedef" DefinitionType identifier .
+			if len(words) != 3 {
+				return &ParseError{
+					Type:    ParseErrorTypeInvalidTypedefDefinition,
+					Message: "Invalid typedef definition.",
+					DocLine: currentDocLine,
+				}
+			}
+
+			// check identifier
+			if !regexpMatchIdentifier.MatchString(words[2]) {
+				return &ParseError{
+					Type:    ParseErrorTypeInvalidIdentifier,
+					Message: fmt.Sprintf("Invalid identifier '%s'.", words[2]),
+					DocLine: currentDocLine,
+				}
+			}
+
+			// create Typedef
+			t := &Typedef{
+				Identifier: &Identifier{
+					Name:    IdentifierName(words[2]),
+					DocLine: currentDocLine,
+				},
+				Type: DefinitionType(words[1]),
+			}
+			// save identifier and typedef
+			doc.identifiers[t.Identifier.Name] = t.Identifier
+			doc.Typedefs[t.Identifier.Name] = t
+
+		case "const": // Const = "const" FieldType ( identifier | QualifiedIdentifier ) "=" const_value .
 			if len(words) != 5 {
 				return &ParseError{
 					Type:    ParseErrorTypeInvalidConstDefinition,
@@ -153,9 +185,14 @@ func (doc *Document) parseDocumentDefinitions() *ParseError {
 				}
 			}
 
-			//++ TODO: check field type
-
-			//++ TODO: regexp identifier
+			// check for identifier to be valid
+			if !regexpMatchIdentifier.MatchString(words[2]) {
+				return &ParseError{
+					Type:    ParseErrorTypeInvalidIdentifier,
+					Message: fmt.Sprintf("Invalid identifier '%s'.", words[2]),
+					DocLine: currentDocLine,
+				}
+			}
 
 			// check if identifier is unique
 			if i, exists := doc.identifiers[IdentifierName(words[2])]; exists {
@@ -186,24 +223,34 @@ func (doc *Document) parseDocumentDefinitions() *ParseError {
 			doc.identifiers[c.Identifier.Name] = c.Identifier
 			doc.Consts[c.Identifier.Name] = c
 
-		case "typedef": // 'typedef' DefinitionType Identifier
+		case "enum": // Enum = "enum" identifier "{" newline { identifier ["=" const_value_int] newline } "}" .
 			return &ParseError{
 				Type:    ParseErrorNotSupported,
-				Message: "Error: typedef is not supported right now.",
+				Message: "Error: enum is not supported right now.",
 				DocLine: currentDocLine,
 			}
-		case "enum": // 'enum' Identifier '{' (Identifier ('=' IntConstant)? ListSeparator?)* '}'
+
+		case "struct": // Struct = "struct" identifier "{" newline { Field newline } "}" .
 			return &ParseError{
 				Type:    ParseErrorNotSupported,
-				Message: "Error: typedef is not supported right now.",
+				Message: "Error: struct is not supported right now.",
 				DocLine: currentDocLine,
 			}
-		case "struct": // 'struct' Identifier 'xsd_all'? '{' Field* '}'
-			//++
-		case "exception": // 'exception' Identifier '{' Field* '}'
-			//++
-		case "service": // 'service' Identifier ( 'extends' Identifier )? '{' Function* '}'		}
-			//++
+
+		case "exception": // TODO
+			return &ParseError{
+				Type:    ParseErrorNotSupported,
+				Message: "Error: exception is not supported right now.",
+				DocLine: currentDocLine,
+			}
+
+		case "service": // Service      = "service" identifier "{" newline { Function newline } "}" .
+			return &ParseError{
+				Type:    ParseErrorNotSupported,
+				Message: "Error: service is not supported right now.",
+				DocLine: currentDocLine,
+			}
+
 		default:
 			return &ParseError{
 				Type:    ParseErrorTypeUnexpectedKeyword,

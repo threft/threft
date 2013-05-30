@@ -2,7 +2,13 @@ package tidm
 
 //++ TODO: Add AddConst, AddTypedef, etc. methods that check if identifier is unique and then add the type and its identifier
 
-type FieldType string //++ TODO
+type FieldType string
+type DefinitionType string
+
+type Typedef struct {
+	Identifier *Identifier
+	Type       DefinitionType
+}
 
 type Const struct {
 	Type       FieldType
@@ -10,24 +16,9 @@ type Const struct {
 	Value      interface{}
 }
 
-//++ TODO
-type Typedef struct {
-	Identifier *Identifier
-
-	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
-
-	Foo string
-	Bar int
-}
-
-//++ TODO
 type Enums struct {
 	Identifier *Identifier
-
-	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
-
-	Foo string
-	Bar int
+	Values     map[string]int
 }
 
 //++ TODO

@@ -1,3 +1,6 @@
 namespace cpp othercpp
 
-const i32 otherconstant = 1
+typedef i32 int32
+
+const i32 otherConstant = 1
+const int32 typedOtherConstant = 42
