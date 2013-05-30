@@ -51,11 +51,12 @@ func (doc *Document) nextMeaningfulLine() string {
 		doc.lastParsedLineNumber++
 		line := doc.lines[doc.lastParsedLineNumber]
 
-		// remove comments from line
-		pos := strings.Index(line, "#")
-		if pos > -1 {
-			line = line[:pos]
+		// fast path for empty line
+		if len(line) == 0 {
+			continue
 		}
+
+		// remove comments from line
 		pos = strings.Index(line, "//")
 		if pos > -1 {
 			line = line[:pos]
@@ -63,10 +64,11 @@ func (doc *Document) nextMeaningfulLine() string {
 
 		// trim space and list seperators from line
 		line = strings.TrimSpace(line)
-		line = strings.TrimRight(line, ",; ")
-		line = strings.TrimSpace(line)
+		// disabled now.. .threft file just shouldn't contain these character at the end of the line..
+		// line = strings.TrimRight(line, ",; ")
+		// line = strings.TrimSpace(line)
 
-		// try next line if this one is empty
+		// try next line if this one is empty after removing
 		if len(line) == 0 {
 			continue
 		}
