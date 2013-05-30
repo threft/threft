@@ -57,7 +57,7 @@ func (doc *Document) nextMeaningfulLine() string {
 		}
 
 		// remove comments from line
-		pos = strings.Index(line, "//")
+		pos := strings.Index(line, "//")
 		if pos > -1 {
 			line = line[:pos]
 		}
