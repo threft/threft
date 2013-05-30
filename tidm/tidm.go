@@ -39,9 +39,8 @@ func NewTIDM() *TIDM {
 }
 
 // Document returns a *Document for given Reference, or an error when Document cannot be found.
-func (t *TIDM) Document(ref Reference) (doc *Document, err error) {
-	var exists bool
-	doc, exists = t.Documents[ref.DocumentName]
+func (t *TIDM) Document(ref Reference) (*Document, error) {
+	doc, exists := t.Documents[ref.DocumentName]
 	if !exists {
 		return nil, errors.New("Document for given Reference does not exist.")
 	}
@@ -49,15 +48,13 @@ func (t *TIDM) Document(ref Reference) (doc *Document, err error) {
 }
 
 // Const returns a *Const for given ConstReference, or an error when Const cannot be found.
-func (t *TIDM) Const(ref ConstReference) (con *Const, err error) {
-	var doc *Document
-	doc, err = t.Document(Reference(ref))
+func (t *TIDM) Const(ref ConstReference) (*Const, error) {
+	doc, err := t.Document(Reference(ref))
 	if err != nil {
 		return nil, err
 	}
 
-	var exists bool
-	con, exists = doc.Consts[ref.IdentifierName]
+	con, exists := doc.Consts[ref.IdentifierName]
 	if !exists {
 		return nil, errors.New("Const for given ConstReference does not exist.")
 	}
@@ -98,7 +95,7 @@ func (t *TIDM) AddDocument(name DocumentName, reader io.Reader) error {
 }
 
 // Parse parses and verifies the complete TIDM tree (each document, each target, each namespace)
-func (t *TIDM) Parse() (perr *ParseError) {
+func (t *TIDM) Parse() *ParseError {
 	if t.parsed {
 		return &ParseError{
 			Type:    ParseErrorTypeAlreadyParsed,
@@ -110,7 +107,7 @@ func (t *TIDM) Parse() (perr *ParseError) {
 	// parse all documents
 	for _, doc := range t.Documents {
 		// parse headers
-		perr = doc.parseDocumentHeaders()
+		perr := doc.parseDocumentHeaders()
 		if perr != nil {
 			return perr
 		}
@@ -132,26 +129,25 @@ func (t *TIDM) Parse() (perr *ParseError) {
 
 	// loop through targets and populate them with the parsed data
 	for targetName, _ := range t.Targets {
-		perr = t.populateTarget(targetName)
+		perr := t.populateTarget(targetName)
 		if perr != nil {
 			return perr
 		}
 	}
 
 	// all done
-	return
+	return nil
 }
 
 // Target() returns a Target for given TargetName
 // If given TargetName does not exist, the default Target is returned.
-func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
+func (t *TIDM) Target(targetName TargetName) (*Target, error) {
 	if !t.parsed {
 		return nil, ErrNotParsedYet
 	}
 
 	// get target from targets map
-	var exists bool
-	target, exists = t.Targets[targetName]
+	target, exists := t.Targets[targetName]
 
 	// get default target if there is no target for given TargetName
 	if !exists {
@@ -163,7 +159,7 @@ func (t *TIDM) Target(targetName TargetName) (target *Target, err error) {
 }
 
 // add definitions from TIDM.Documents to the right namespace for given target
-func (t *TIDM) populateTarget(targetName TargetName) (perr *ParseError) {
+func (t *TIDM) populateTarget(targetName TargetName) *ParseError {
 	var err error
 
 	// get target from TIDM.Targets list

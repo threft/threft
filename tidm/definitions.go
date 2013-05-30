@@ -31,16 +31,6 @@ type Enums struct {
 }
 
 //++ TODO
-type Senum struct {
-	Identifier *Identifier
-
-	//++ TODO: fields have their own type (structs) with data and DocLine to identify the field-specific doc and line
-
-	Foo string
-	Bar int
-}
-
-//++ TODO
 type Struct struct {
 	Identifier *Identifier
 

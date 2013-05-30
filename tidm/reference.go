@@ -15,9 +15,6 @@ type TypedefReference Reference
 // EnumReference references an Enum within the TIDM
 type EnumReference Reference
 
-// SenumReference references a Senum within the TIDM
-type SenumReference Reference
-
 // StructReference references a Struct within the TIDM
 type StructReference Reference
 

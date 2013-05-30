@@ -37,7 +37,6 @@ type Document struct {
 	Consts     map[IdentifierName]*Const
 	Typedefs   map[IdentifierName]*Typedef
 	Enums      map[IdentifierName]*Enums
-	Senums     map[IdentifierName]*Senum
 	Structs    map[IdentifierName]*Struct
 	Exceptions map[IdentifierName]*Exception
 	Services   map[IdentifierName]*Service
@@ -64,7 +63,6 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 		Consts:     make(map[IdentifierName]*Const),
 		Typedefs:   make(map[IdentifierName]*Typedef),
 		Enums:      make(map[IdentifierName]*Enums),
-		Senums:     make(map[IdentifierName]*Senum),
 		Structs:    make(map[IdentifierName]*Struct),
 		Exceptions: make(map[IdentifierName]*Exception),
 		Services:   make(map[IdentifierName]*Service),
@@ -72,7 +70,7 @@ func (t *TIDM) newDocument(name DocumentName) (*Document, error) {
 		identifiers:          make(map[IdentifierName]*Identifier),
 		lastParsedLineNumber: -1,
 	}
-	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".thrift", "", -1))
+	doc.NamespaceForTarget[TargetNameDefault] = NamespaceName(strings.Replace(string(name), ".threft", "", -1))
 	t.Documents[name] = doc
 
 	// set max doc filename length

@@ -1,10 +1,10 @@
 `tidm` is an acronym for Threft Interface Definition Model.
-It contains methods to parse a .thrift file to a in-memory interface definition model and provides marshalling to `tidm-json`.
+It contains methods to parse a .threft file to a in-memory interface definition model and provides marshalling to `tidm-json`.
 
 Does not marshall to JSON.
 
-// Parses a .thrift IDL file to TisObject
-ParseThriftFile(filename string) (*tidm.TIDM, error)
+// Parses a .threft IDL file to TisObject
+ParseThreftFile(filename string) (*tidm.TIDM, error)
 
 
 Parsing:

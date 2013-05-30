@@ -32,7 +32,7 @@ func (pe *ParseError) Error() string {
 }
 
 var (
-	regexpMatchIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-\.]*$`)
+	regexpMatchIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_\-\.]*$`)
 
 	// TODO(GeertJohan): Add escape functionality to double-quoted string
 	// TODO(GeertJohan): remove support for string literal with single quote.
@@ -40,7 +40,7 @@ var (
 )
 
 // nextMeaningfulLine gives the next line that is not empty nor a comment
-func (doc *Document) nextMeaningfulLine() (line string) {
+func (doc *Document) nextMeaningfulLine() string {
 	for {
 		// check if the complete doc has been parsed
 		if len(doc.lines)-1 == doc.lastParsedLineNumber {
@@ -49,7 +49,7 @@ func (doc *Document) nextMeaningfulLine() (line string) {
 
 		// fetch next line
 		doc.lastParsedLineNumber++
-		line = doc.lines[doc.lastParsedLineNumber]
+		line := doc.lines[doc.lastParsedLineNumber]
 
 		// remove comments from line
 		pos := strings.Index(line, "#")
@@ -75,7 +75,7 @@ func (doc *Document) nextMeaningfulLine() (line string) {
 }
 
 // parseDocumentHeaders parses document headers
-func (doc *Document) parseDocumentHeaders() (perr *ParseError) {
+func (doc *Document) parseDocumentHeaders() *ParseError {
 	// loop through lines
 	for {
 
@@ -128,7 +128,7 @@ func (doc *Document) parseDocumentHeaders() (perr *ParseError) {
 }
 
 // parseDocumentDefinitions parses document definitions
-func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
+func (doc *Document) parseDocumentDefinitions() *ParseError {
 	var countDefinitions int
 
 	// loop through lines
@@ -196,11 +196,9 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 				DocLine: currentDocLine,
 			}
 		case "enum": // 'enum' Identifier '{' (Identifier ('=' IntConstant)? ListSeparator?)* '}'
-			//++
-		case "senum": // 'senum' Identifier '{' (Literal ListSeparator?)* '}'
 			return &ParseError{
 				Type:    ParseErrorNotSupported,
-				Message: "Error: senum is not supported right now.",
+				Message: "Error: typedef is not supported right now.",
 				DocLine: currentDocLine,
 			}
 		case "struct": // 'struct' Identifier 'xsd_all'? '{' Field* '}'
@@ -209,6 +207,12 @@ func (doc *Document) parseDocumentDefinitions() (perr *ParseError) {
 			//++
 		case "service": // 'service' Identifier ( 'extends' Identifier )? '{' Function* '}'		}
 			//++
+		default:
+			return &ParseError{
+				Type:    ParseErrorTypeUnexpectedKeyword,
+				Message: fmt.Sprintf("Error: keyword '%s' is not valid.", words[0]),
+				DocLine: currentDocLine,
+			}
 		}
 		// fmt.Printf("definition: %s\n", line)
 	}

@@ -51,7 +51,7 @@ func scanDir(path string) (filenames []string) {
 			// if err != nil {
 			//	return err
 			// }
-		} else if strings.HasSuffix(foundFile, ".thrift") {
+		} else if strings.HasSuffix(foundFile, ".threft") {
 			// found a .thrift file
 			filenames = append(filenames, foundFile)
 		}
@@ -117,8 +117,8 @@ func main() {
 		} else {
 			// only one file given
 			// check if file is thrift file
-			if !strings.HasSuffix(filefolder, ".thrift") {
-				exitWithError("Error: invalid file extension for '%s' (expected .thrift).\n", filefolder)
+			if !strings.HasSuffix(filefolder, ".threft") {
+				exitWithError("Error: invalid file extension for '%s' (expected .threft).\n", filefolder)
 			}
 
 			// add filename to list

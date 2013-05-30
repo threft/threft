@@ -18,7 +18,6 @@ type Namespace struct {
 	ConstReferences     map[IdentifierName]*ConstReference
 	TypedefReferences   map[IdentifierName]*TypedefReference
 	EnumReferences      map[IdentifierName]*EnumReference
-	SenumReferences     map[IdentifierName]*SenumReference
 	StructReferences    map[IdentifierName]*StructReference
 	ExceptionReferences map[IdentifierName]*ExceptionReference
 	ServiceReferences   map[IdentifierName]*ServiceReference
@@ -45,7 +44,6 @@ func (target *Target) newNamespace(name NamespaceName) (*Namespace, error) {
 		ConstReferences:     make(map[IdentifierName]*ConstReference),
 		TypedefReferences:   make(map[IdentifierName]*TypedefReference),
 		EnumReferences:      make(map[IdentifierName]*EnumReference),
-		SenumReferences:     make(map[IdentifierName]*SenumReference),
 		StructReferences:    make(map[IdentifierName]*StructReference),
 		ExceptionReferences: make(map[IdentifierName]*ExceptionReference),
 		ServiceReferences:   make(map[IdentifierName]*ServiceReference),
