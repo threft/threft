@@ -40,11 +40,12 @@ var (
 )
 
 // nextMeaningfulLine gives the next line that is not empty nor a comment
+// when an empty line is returned, parsing should be stopped
 func (doc *Document) nextMeaningfulLine() string {
 	for {
 		// check if the complete doc has been parsed
 		if len(doc.lines)-1 == doc.lastParsedLineNumber {
-			return ""
+			return "" // parser should stop on empty line
 		}
 
 		// fetch next line
@@ -64,14 +65,13 @@ func (doc *Document) nextMeaningfulLine() string {
 
 		// trim space and list seperators from line
 		line = strings.TrimSpace(line)
-		// disabled now.. .threft file just shouldn't contain these character at the end of the line..
-		// line = strings.TrimRight(line, ",; ")
-		// line = strings.TrimSpace(line)
 
 		// try next line if this one is empty after removing
 		if len(line) == 0 {
 			continue
 		}
+
+		// found valid line, return it.
 		return line
 	}
 }
@@ -94,11 +94,6 @@ func (doc *Document) parseDocumentHeaders() *ParseError {
 		case "include":
 			// not supporting cross-document references (yet?).
 			fmt.Printf("Ignoring include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber+1)
-			continue
-
-		case "cpp_include":
-			// not supporting cpp inclusion (yet?).
-			fmt.Printf("Ignoring cpp_include statement at %s:%d\n", doc.Name, doc.lastParsedLineNumber+1)
 			continue
 
 		case "namespace":
